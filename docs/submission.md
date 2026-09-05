@@ -24,7 +24,7 @@ This file is the how-to-enter sheet. Official links win if anything here drifts.
 2. **Repost** the announcement: https://x.com/binance/status/2094810011557838988
 3. **Reply or quote** that post with:
    - a short **demo video** (60–90 seconds is enough; see [demo-script.md](demo-script.md))
-   - the **GitHub URL** of this repo (after you click **Create repo** if this is still a local/cloud project)
+   - the **GitHub URL**: https://github.com/scanner72/safe-desk-agent
 4. **Complete** the survey: https://www.binance.com/en/survey/2913aa200aac462c89a737779393f3d4
 5. Finish before **8 Sep 2026 23:59 UTC**.
 
@@ -72,7 +72,7 @@ Track A — Safe Desk Agent
 Risk-first Binance Agent OS copilot.
 Agentic subaccount only. No withdrawals. Human OK before any order. Dry-run by default.
 
-GitHub: <your-repo-url>
+GitHub: https://github.com/scanner72/safe-desk-agent
 Demo: <video>
 ```
 
