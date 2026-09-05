@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "safe-desk-agent"
+version = "0.1.0"
+description = "Risk-first Binance Agent OS copilot. Analysis and tickets only — no API secrets."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "Safe Desk Agent contributors" }]
+keywords = ["binance", "mcp", "agent-os", "risk", "trading"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+safe-desk = "safe_desk.cli:main"
+
+[project.urls]
+Documentation = "https://developers.binance.com/en/docs/agent-native/mcp-server"
+AgentOS = "https://www.binance.com/en/agent-os"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
