@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Helper runtime
+logs/*.jsonl
+!logs/.gitkeep
+
+# Fetched third-party snapshots (not part of the project)
+agent-tools/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
