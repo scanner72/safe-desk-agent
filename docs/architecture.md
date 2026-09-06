@@ -6,14 +6,15 @@ Safe Desk is a **policy layer** around the official Binance MCP. The LLM stays i
 ┌─────────────────────────────────────────────┐
 │  Human                                      │
 │  fund Agentic box · say OK TKT-… · revoke   │
+│  or open http://127.0.0.1:8765 (local UI)   │
 └────────────────┬─────────────────────────────┘
                 │
                 ▼
 ┌─────────────────────────────────────────────┐
-│  MCP client  (Claude / ChatGPT / Cursor /   │
-│  Codex)                                     │
+│  Local web UI  (`python -m safe_desk.web`)  │
+│  and/or MCP client (Claude / Cursor / …)    │
 │  + Safe Desk skill / system prompt          │
-│  + optional `python -m safe_desk`           │
+│  + optional `python -m safe_desk` CLI       │
 └────────────────┬─────────────────────────────┘
                 │ Streamable HTTP
                 ▼
@@ -46,15 +47,17 @@ Binance has said it can monitor resulting trades and cannot see agent reasoning.
 2. **Score** — SMA20/SMA50, ATR, risk score. Helper optional but reproducible.
 3. **Proof** — leakage-safe analog windows on OHLCV (median forward return / hit rate → APPROVE, WAIT, REJECT).
 4. **Policy** — allowlist, max notional, 1% risk, daily caps, emergency stop. Withdrawals always fail. Fail → ticket `BLOCKED`.
-5. **Ticket** — qty from `1% equity / stop distance`. Status `awaiting_approval` only if gates pass. Append `logs/proposals.jsonl`.
-6. **Gate** — no Trade tool until `OK TKT-…`.
-7. **Act** — dry-run: simulated payload. Live: one MCP place, then status read-back.
+5. **Why** — 2–4 plain sentences (ENTER / WAIT / SKIP) a non-trader can read. Not an order.
+6. **Ticket** — qty from `1% equity / stop distance`. Status `awaiting_approval` only if gates pass. Append `logs/proposals.jsonl`.
+7. **Gate** — no Trade tool until `OK TKT-…` (web Approve button stays disabled until that phrase is typed).
+8. **Act** — dry-run: simulated payload + **PAPER** journal line (`logs/paper_journal.jsonl`). Live (MCP client only): one MCP place, then status read-back. The local UI stays dry-run.
+9. **Alerts** — proof REJECT, policy BLOCKED, withdraw refused, daily cap → `logs/alerts.jsonl`.
 
 ## Why there is no trading SDK here
 
 Track A is "build an AI agent with Agent OS". Execution belongs to the [official MCP](https://developers.binance.com/en/docs/agent-native/mcp-server). Shipping API keys or a shadow REST client would fight the safety story (no secrets, Agentic-only, human OK).
 
-The Python package is deliberately stdlib-only: indicators, sizing, MCP-shaped JSON formatting, analog proof, YAML/JSON policy, ticket JSON, and an append-only log. JSON keys stay English.
+Core math stays stdlib (indicators, sizing, MCP-shaped JSON, analog proof, YAML/JSON policy, why-entry, ticket JSON, paper journal, alerts). The optional local UI is FastAPI + static HTML (no login, no secrets). JSON keys stay English.
 
 ## Defaults
 
@@ -74,7 +77,8 @@ prompts/SAFETY.md     exchange + desk controls
 prompts/COMMANDS.md   intents
 prompts/TICKET.md     ticket / log schema
 skills/…/SKILL.md     portable skill
-src/safe_desk/                 local math (SMA, ATR, 1% sizing, proof, policy, tickets)
+src/safe_desk/                 local math (SMA, ATR, 1% sizing, proof, policy, why, tickets)
+src/safe_desk/web/             local trader UI
 config/policy.example.yaml     desk policy example (no secrets)
 prompts/LIVE_VS_OFFLINE.md     MCP live path vs CSV offline path
 docs/submission.md             how to enter

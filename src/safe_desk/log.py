@@ -1,4 +1,4 @@
-"""Append-only proposal log. One JSON object per line."""
+"""Append-only JSONL logs. One JSON object per line."""
 
 from __future__ import annotations
 
@@ -10,6 +10,35 @@ from typing import Any
 from safe_desk.ticket import TradeTicket
 
 DEFAULT_LOG = Path("logs/proposals.jsonl")
+
+
+def append_jsonl(path: Path, row: dict[str, Any]) -> Path:
+    """Append one JSON object. Creates parent directories as needed."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, separators=(",", ":"), ensure_ascii=False) + "\n")
+    return target
+
+
+def read_jsonl(path: Path | str | None) -> list[dict[str, Any]]:
+    """Read a JSONL file. Missing or empty → []. Skips bad lines."""
+    if path is None:
+        return []
+    target = Path(path)
+    if not target.is_file():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in target.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            rows.append(obj)
+    return rows
 
 
 def append_proposal(

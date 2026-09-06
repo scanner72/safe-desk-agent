@@ -18,3 +18,4 @@ jobs:
       - run: python -m safe_desk quote --price-json examples/mcp-price.json --balance-json examples/mcp-balance.json
       - run: python -m safe_desk size --equity 1000 --entry 102450 --stop 100200
       - run: python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 --entry 102450 --stop 100200 --tp 106950 --proof-csv examples/btc-ohlcv.csv
+      - run: python -c "from safe_desk.web.app import create_app; create_app()"

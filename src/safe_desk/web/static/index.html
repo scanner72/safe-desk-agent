@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safe Desk — simple trader UI</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="banner" data-i18n="paper_banner">PAPER / SIMULATED — not live Binance profit or loss. Dry-run stays on. No API secrets.</div>
+
+    <header class="top">
+      <div class="brand">
+        <h1>Safe Desk</h1>
+        <p data-i18n="tagline">A simple desk for a normal exchange user. No terminal required.</p>
+      </div>
+      <div class="row">
+        <span class="badge dry">DRY-RUN</span>
+        <span class="badge paper">PAPER</span>
+        <div class="lang-toggle">
+          <button type="button" data-lang="en">EN</button>
+          <button type="button" data-lang="ru">RU</button>
+        </div>
+      </div>
+    </header>
+
+    <nav>
+      <button type="button" class="on" data-panel="dash" data-i18n="nav_dash">Dashboard</button>
+      <button type="button" data-panel="analyze" data-i18n="nav_analyze">Analyze</button>
+      <button type="button" data-panel="ticket" data-i18n="nav_ticket">Ticket</button>
+      <button type="button" data-panel="paper" data-i18n="nav_paper">Paper</button>
+      <button type="button" data-panel="alerts" data-i18n="nav_alerts">Alerts</button>
+    </nav>
+
+    <section id="panel-dash" class="panel on">
+      <div class="card">
+        <h2 data-i18n="dash_title">Desk status</h2>
+        <div id="dash-grid" class="grid"></div>
+        <div id="dash-notes"></div>
+        <p class="hint">Venue: Binance Agentic subaccount only. Withdrawals always refused. Official MCP: <span class="mcp">https://agent.binance.com/mcp/agentic</span></p>
+      </div>
+    </section>
+
+    <section id="panel-analyze" class="panel">
+      <div class="card">
+        <h2 data-i18n="analyze_title">What is the setup?</h2>
+        <div class="form-grid">
+          <label class="field">Symbol <input id="f-symbol" value="BTCUSDT"></label>
+          <label class="field">Side
+            <select id="f-side"><option>BUY</option><option>SELL</option></select>
+          </label>
+          <label class="field">Stop <input id="f-stop" inputmode="decimal"></label>
+          <label class="field">Equity (Agentic) <input id="f-equity" inputmode="decimal"></label>
+          <label class="field">Risk % <input id="f-risk" value="1" inputmode="decimal"></label>
+        </div>
+        <label class="field">CSV (or upload)
+          <input id="f-file" type="file" accept=".csv,text/csv">
+          <textarea id="f-csv" placeholder="date,open,high,low,close,volume"></textarea>
+        </label>
+        <label class="field">Optional MCP price JSON
+          <textarea id="f-price" placeholder='{"symbol":"BTCUSDT","lastPrice":"102450"}'></textarea>
+        </label>
+        <label class="field">Optional MCP balance JSON
+          <textarea id="f-balance" placeholder='{"account":"agentic","balances":[{"asset":"USDT","free":"1000"}]}'></textarea>
+        </label>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-sample" data-i18n="use_sample">Use sample BTC CSV</button>
+          <button type="button" class="btn" id="btn-analyze" data-i18n="run_analyze">Explain this setup</button>
+        </div>
+        <p class="hint">Offline works without MCP login. Pasted JSON is formatted only — this app never stores secrets and never calls Binance REST.</p>
+        <div id="analyze-out"></div>
+      </div>
+    </section>
+
+    <section id="panel-ticket" class="panel">
+      <div class="card">
+        <h2 data-i18n="ticket_title">Ticket + human OK</h2>
+        <div class="form-grid">
+          <label class="field">Symbol <input id="t-symbol" value="BTCUSDT"></label>
+          <label class="field">Side
+            <select id="t-side"><option>BUY</option><option>SELL</option></select>
+          </label>
+          <label class="field">Entry <input id="t-entry" inputmode="decimal"></label>
+          <label class="field">Stop <input id="t-stop" inputmode="decimal"></label>
+          <label class="field">Take profit <input id="t-tp" inputmode="decimal"></label>
+          <label class="field">Equity <input id="t-equity" inputmode="decimal"></label>
+          <label class="field">Risk % <input id="t-risk" value="1" inputmode="decimal"></label>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-ticket" data-i18n="create_ticket">Create ticket (still not an order)</button>
+        </div>
+        <div id="ticket-out"></div>
+        <h3 data-i18n="must_type">Type exactly OK plus the ticket id. A bare “ok” is rejected.</h3>
+        <label class="field">OK TKT-…
+          <input id="ok-phrase" autocomplete="off" placeholder="OK TKT-…">
+        </label>
+        <div class="actions">
+          <button type="button" class="btn primary" id="btn-approve" disabled data-i18n="approve">Approve dry-run (PAPER)</button>
+          <button type="button" class="btn" id="btn-cancel" data-i18n="cancel">Cancel ticket</button>
+        </div>
+        <div id="approve-out"></div>
+      </div>
+    </section>
+
+    <section id="panel-paper" class="panel">
+      <div class="card">
+        <h2 data-i18n="paper_title">Paper journal</h2>
+        <div id="paper-summary"></div>
+        <div class="actions">
+          <button type="button" class="btn warn" id="btn-close-tp" disabled data-i18n="close_tp">Close paper at take-profit</button>
+          <button type="button" class="btn danger" id="btn-close-sl" disabled data-i18n="close_sl">Close paper at stop</button>
+        </div>
+        <div id="paper-table"></div>
+      </div>
+    </section>
+
+    <section id="panel-alerts" class="panel">
+      <div class="card">
+        <h2 data-i18n="alerts_title">Alerts you should see now</h2>
+        <div class="actions">
+          <button type="button" class="btn danger" id="btn-withdraw" data-i18n="try_withdraw">Try withdraw (must refuse)</button>
+        </div>
+        <div id="alerts-extra"></div>
+        <div id="alerts-list"></div>
+      </div>
+    </section>
+
+    <footer data-i18n="disclaimer">
+      Not financial advice. Crypto can go to zero. Official MCP only: https://agent.binance.com/mcp/agentic. Binance does not endorse this project.
+    </footer>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

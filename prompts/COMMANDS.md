@@ -15,6 +15,9 @@ Natural language is fine. The left column is the canonical form.
 | Live on | `ENABLE LIVE` then `I ACCEPT LIVE RISK` | No | Two phrases |
 | Live off | `DRY-RUN` | No | Immediate |
 | Forbidden | `withdraw 100 USDT`, `send to 0x…`, `transfer to main` | Must not call | Hard refuse |
+| Web UI | `python -m safe_desk.web` | No | Local dry-run page; still `OK TKT-…` |
+| Paper journal | Paper section / `safe_desk journal` | No | **SIMULATED / PAPER** only |
+| Alerts | Alerts section / `safe_desk alerts` | No | Proof REJECT, policy, withdraw, daily cap |
 
 Live vs offline: [LIVE_VS_OFFLINE.md](LIVE_VS_OFFLINE.md). MCP endpoint: `https://agent.binance.com/mcp/agentic`.
 

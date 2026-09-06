@@ -65,6 +65,14 @@ python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
 
 The CSV is **synthetic**. Say so. Do not present the score as a live signal or as PnL.
 
+For a user who does not want the terminal, the same offline path is the local UI:
+
+```bash
+python -m safe_desk.web
+```
+
+Open `http://127.0.0.1:8765`. Sample CSV, tickets, `OK TKT-…`, and the PAPER journal all work without MCP login.
+
 The place path is still the official MCP after `OK TKT-…`. Offline mode only does math.
 
 ---

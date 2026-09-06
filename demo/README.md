@@ -7,7 +7,8 @@ Every file in this folder is a **rehearsal transcript**, not a live session and 
 - No file claims a fill was profitable.
 
 **Record the video from** [WALKTHROUGH.md](WALKTHROUGH.md) (timer + continuous chat).  
-**Offline CLI** (no MCP): [07-cli-offline.md](07-cli-offline.md).
+**Offline CLI** (no MCP): [07-cli-offline.md](07-cli-offline.md).  
+**Web UI** (no terminal after start): [09-web-ui.md](09-web-ui.md).
 
 Start here if you are judging on a plane:
 
@@ -19,3 +20,4 @@ Start here if you are judging on a plane:
 6. [06-refusal-withdrawal.md](06-refusal-withdrawal.md)
 7. [07-cli-offline.md](07-cli-offline.md)
 8. [08-proof-and-policy.md](08-proof-and-policy.md)
+9. [09-web-ui.md](09-web-ui.md)

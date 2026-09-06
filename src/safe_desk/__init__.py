@@ -2,7 +2,8 @@
 
 No exchange credentials. Market data and orders go through the official
 Binance MCP after a human approval. This package sizes tickets, scores
-simple setups, runs a leakage-safe analog proof, and applies desk policy.
+simple setups, runs a leakage-safe analog proof, applies desk policy,
+explains why in plain language, and keeps a PAPER journal.
 """
 
 from safe_desk.indicators import atr, realized_vol, sma, trend_state
@@ -12,6 +13,7 @@ from safe_desk.position_sizing import size_spot
 from safe_desk.proof import run_proof
 from safe_desk.risk import evaluate_setup
 from safe_desk.ticket import TradeTicket, build_ticket
+from safe_desk.why import explain_why
 
 __all__ = [
     "MCP_ENDPOINT",
@@ -19,6 +21,7 @@ __all__ = [
     "build_ticket",
     "evaluate_policy",
     "evaluate_setup",
+    "explain_why",
     "load_live_quote",
     "load_policy",
     "realized_vol",
@@ -28,4 +31,4 @@ __all__ = [
     "trend_state",
     "TradeTicket",
 ]
-__version__ = "0.2.0"
+__version__ = "0.3.0"

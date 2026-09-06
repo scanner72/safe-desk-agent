@@ -26,6 +26,8 @@ def test_sample_csv_analyze_matches_demo(capsys):
     assert "LOW" in out
     assert "20 / 100" in out
     assert "BUY  (setup only — not an order)" in out
+    assert "Why (plain language)" in out
+    assert "Why ENTER" in out
     assert "No MCP call was made" in out
 
 
