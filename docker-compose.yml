@@ -1,0 +1,13 @@
+# Local rehearsal desk. No secrets. Dry-run only.
+#   docker compose up --build
+#   open http://127.0.0.1:8080
+services:
+  desk:
+    build: .
+    image: safe-desk-agent:local
+    ports:
+      - "8080:8080"
+    environment:
+      SAFE_DESK_ROOT: /app
+      SAFE_DESK_MODE: dry-run
+    # This container never talks to Binance REST and never receives API keys.

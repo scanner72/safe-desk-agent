@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Safe Desk — dry-run copilot</title>
+  <link rel="stylesheet" href="/static/desk.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <h1>SAFE DESK</h1>
+        <p>Risk-first Binance Agent OS copilot · Track A<br />
+          Official MCP: <a href="https://agent.binance.com/mcp/agentic">https://agent.binance.com/mcp/agentic</a>
+        </p>
+      </div>
+      <div class="badges">
+        <span class="badge dry">Dry-run default</span>
+        <span class="badge sim">Simulated · not live PnL</span>
+        <span class="badge">SPOT · 1% max</span>
+        <span class="badge warn">No withdrawals</span>
+      </div>
+    </header>
+
+    <nav class="pipeline" id="pipeline">
+      <div class="step" data-step="read"><b>1 Read</b>price / balance</div>
+      <div class="step" data-step="analyze"><b>2 Analyze</b>SMA · ATR · score</div>
+      <div class="step" data-step="proof"><b>3 Proof</b>analog gate</div>
+      <div class="step" data-step="policy"><b>4 Policy</b>allowlist · caps</div>
+      <div class="step" data-step="ticket"><b>5 Ticket</b>wait for OK</div>
+      <div class="step" data-step="ok"><b>6 OK TKT-…</b>simulate only</div>
+    </nav>
+
+    <div class="grid">
+      <aside class="panel">
+        <h2>Desk actions</h2>
+        <div class="actions">
+          <button id="btn-analyze" class="primary" type="button">Analyze BTCUSDT (offline CSV)</button>
+          <button id="btn-proof" type="button">Run analog proof</button>
+          <button id="btn-policy" type="button">Check policy (ticket)</button>
+          <button id="btn-ticket" type="button">Propose 1% ticket</button>
+        </div>
+        <label for="phrase">Human command</label>
+        <input id="phrase" placeholder="ok  ·  OK TKT-…  ·  withdraw 50 USDT" />
+        <div class="row">
+          <button id="btn-ok" type="button">Send</button>
+          <button id="btn-bare" type="button">bare ok</button>
+          <button id="btn-withdraw" class="danger" type="button">withdraw</button>
+        </div>
+        <div class="flash" id="flash"></div>
+        <p class="footer">This UI never stores API keys and never calls Binance REST. Offline path uses <code>examples/btc-ohlcv.csv</code>. Live path is official MCP after a matching <code>OK TKT-…</code>.</p>
+      </aside>
+
+      <main class="cards" id="cards">
+        <section class="card" id="card-welcome">
+          <h3>Rehearsal desk</h3>
+          <p>Click through analyze → proof → policy → ticket. A bare “ok” must fail. Only <code>OK TKT-…</code> prints a simulated payload. Withdrawals are refused.</p>
+        </section>
+      </main>
+    </div>
+    <p class="footer">Not financial advice. Unofficial community agent. Binance does not endorse this project. Crypto can go to zero inside the Agentic box.</p>
+  </div>
+  <script src="/static/desk.js"></script>
+</body>
+</html>

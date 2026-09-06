@@ -147,6 +147,14 @@ def main(argv: list[str] | None = None) -> int:
     quote.add_argument("--symbol", default=None)
     quote.add_argument("--json", action="store_true")
 
+    serve = sub.add_parser(
+        "serve",
+        parents=[shared],
+        help="Local dry-run desk UI (stdlib HTTP, no secrets)",
+    )
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8080)
+
     args = parser.parse_args(argv)
     lang = norm_lang(args.lang)
     if args.cmd == "analyze":
@@ -161,6 +169,11 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_policy_check(args, lang)
     if args.cmd == "quote":
         return _cmd_quote(args, lang)
+    if args.cmd == "serve":
+        from safe_desk.web import serve as serve_ui
+
+        serve_ui(host=args.host, port=args.port)
+        return 0
     parser.error(f"unknown command {args.cmd}")
     return 2
 

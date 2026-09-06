@@ -91,6 +91,24 @@ python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
 
 `examples/mcp-*.json` are **SIMULATED** MCP-shaped payloads for rehearsal (same numbers as the CSV). In a live session, replace them with a real MCP tool result.
 
+### Desk UI (dry-run, no secrets)
+
+Local stdlib HTTP UI — same gates as the CLI. Does **not** place orders.
+
+```bash
+python -m safe_desk serve --host 127.0.0.1 --port 8080
+# open http://127.0.0.1:8080
+```
+
+### Docker
+
+```bash
+docker compose up --build
+# open http://127.0.0.1:8080
+```
+
+The image has no API keys and does not call Binance REST. Dry-run only. Official MCP remains the place path after `OK TKT-…`.
+
 ### 60–90s video script
 
 Speak this (or the longer cut in [docs/demo-script.md](docs/demo-script.md)):
@@ -179,8 +197,9 @@ prompts/LIVE_VS_OFFLINE.md      MCP live path vs CSV offline path
 prompts/COMMANDS.md             intents
 prompts/TICKET.md               ticket template
 skills/safe-desk-agent/         portable skill
-src/safe_desk/                  SMA, ATR, 1% sizing, proof, policy, tickets
+src/safe_desk/                  SMA, ATR, 1% sizing, proof, policy, tickets, UI
 config/policy.example.yaml      desk policy (no secrets)
+Dockerfile · docker-compose.yml dry-run desk UI (no secrets)
 docs/architecture.md
 docs/submission.md              how to enter
 docs/submission-checklist.md    day-of boxes (follow / repost / reply / survey)
