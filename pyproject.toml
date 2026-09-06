@@ -28,6 +28,7 @@ dev = ["pytest>=8.0"]
 safe-desk = "safe_desk.cli:main"
 
 [project.urls]
+Homepage = "https://github.com/scanner72/safe-desk-agent"
 Documentation = "https://developers.binance.com/en/docs/agent-native/mcp-server"
 AgentOS = "https://www.binance.com/en/agent-os"
 

@@ -14,10 +14,10 @@
   "equity_quote": 1000.0,
   "risk_pct": 1.0,
   "risk_quote": 10.0,
-  "quantity": 0.004446,
-  "notional": 455.502,
+  "quantity": 0.0044444444444444445,
+  "notional": 455.3333333333333,
   "reward_risk": 2.0,
-  "rationale": "Daily close holds above SMA20/SMA50. ATR% is NORMAL. Stop sits about 1.2× ATR under the last swing.",
+  "rationale": "Daily close holds above SMA20/SMA50. ATR% is LOW. Stop sits about 3.2× ATR under the last swing.",
   "invalidation": "Daily close below 100200 cancels the idea.",
   "notes": [
     "SIMULATED demo ticket. Not a live order and not PnL."

@@ -33,7 +33,7 @@ args:
   side: BUY
   type: LIMIT
   timeInForce: GTC
-  quantity: 0.004446
+  quantity: 0.00444444
   price: 102450
   newClientOrderId: TKT-20260905-160000
 status: simulated

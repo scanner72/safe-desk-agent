@@ -7,6 +7,9 @@
 
 This file is the how-to-enter sheet. Official links win if anything here drifts.
 
+**Day-of boxes:** [submission-checklist.md](submission-checklist.md)  
+**Ready-to-paste X text:** [x-submission-draft.md](x-submission-draft.md)
+
 ## Official links
 
 | What | URL |
@@ -52,29 +55,12 @@ Not available in the **United States, United Kingdom, EEA, Hong Kong, Singapore*
 
 Do not also claim Track B unless you build a separate integration story.
 
-## Submission checklist
+## Checklist and X draft
 
-- [ ] Repo is public (or the URL you put on X resolves)
-- [ ] README in English: what it is, MCP connect, 60–90s demo, safety, disclaimer
-- [ ] System prompt / skill committed (`prompts/`, `skills/`)
-- [ ] Demo video recorded from [demo-script.md](demo-script.md)
-- [ ] Follow + repost + reply/quote with video + GitHub
-- [ ] Survey submitted
-- [ ] No fake live PnL in the video or README
-- [ ] No Polymarket / off-venue claims
-- [ ] You are outside restricted regions
+Do not duplicate boxes here. Use:
 
-## Suggested X reply (edit the URL)
-
-```
-Track A — Safe Desk Agent
-
-Risk-first Binance Agent OS copilot.
-Agentic subaccount only. No withdrawals. Human OK before any order. Dry-run by default.
-
-GitHub: https://github.com/scanner72/safe-desk-agent
-Demo: <video>
-```
+- [submission-checklist.md](submission-checklist.md) — follow, repost, reply with GitHub + demo, survey, jurisdictions
+- [x-submission-draft.md](x-submission-draft.md) — English reply / quote text that already includes `https://github.com/scanner72/safe-desk-agent`
 
 ## Disclaimer
 
