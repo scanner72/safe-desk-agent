@@ -98,12 +98,28 @@ def test_analyze_sample_then_ticket_ok_journal(tmp_path: Path):
 
 def test_withdraw_refused_writes_alert(tmp_path: Path):
     client = _client(tmp_path)
+    client.post(
+        "/api/analyze",
+        json={
+            "use_sample": True,
+            "symbol": "BTCUSDT",
+            "side": "BUY",
+            "stop": 100200,
+            "equity": 1000,
+        },
+    )
+    before = client.get("/api/status").json()
+    assert before["last_policy"] is not None
+    assert before["last_policy"]["ok"] is True
     refused = client.post("/api/withdraw", json={"note": "withdraw 50 USDT"})
     assert refused.status_code == 403
     assert refused.json()["refused"] is True
     alerts = client.get("/api/alerts").json()
     assert alerts["count"] >= 1
     assert any(a["kind"] == "WITHDRAW_REFUSED" for a in alerts["alerts"])
+    after = client.get("/api/status").json()
+    assert after["last_policy"]["ok"] is True
+    assert after["last_policy"]["intent"] == "ticket"
 
 
 def test_desk_approve_requires_full_phrase(tmp_path: Path):

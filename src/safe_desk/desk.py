@@ -86,6 +86,7 @@ class Desk:
         self.last_proof: ProofReport | None = None
         self.last_policy: PolicyResult | None = None
         self.last_why: WhyEntry | None = None
+        # Withdraw checks must not overwrite the last *ticket* policy chip.
         self._tickets: dict[str, dict[str, Any]] = {}
         self._reload_tickets()
 
@@ -480,7 +481,6 @@ class Desk:
 
     def refuse_withdraw(self, *, note: str = "withdraw") -> dict[str, Any]:
         policy = evaluate_policy(intent="withdraw", config=self.policy_config())
-        self.last_policy = policy
         emit_from_policy(policy, path=self.paths.alerts)
         return {
             "ok": False,
