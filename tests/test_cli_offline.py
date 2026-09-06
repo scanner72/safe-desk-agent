@@ -29,6 +29,30 @@ def test_sample_csv_analyze_matches_demo(capsys):
     assert "No MCP call was made" in out
 
 
+def test_analyze_live_overlay_keeps_offline_honesty(capsys):
+    rc = main(
+        [
+            "analyze",
+            str(CSV),
+            "--symbol",
+            "BTCUSDT",
+            "--price-json",
+            str(ROOT / "examples" / "mcp-price.json"),
+            "--balance-json",
+            str(ROOT / "examples" / "mcp-balance.json"),
+            "--stop",
+            "100200",
+        ]
+    )
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "102,450.00" in out
+    assert "BUY  (setup only — not an order)" in out
+    assert "No MCP call was made" in out
+    assert "MCP-shaped JSON" in out
+    assert "Illustrative size" in out
+
+
 def test_readme_size_and_ticket_commands(capsys, tmp_path: Path):
     assert main(["size", "--equity", "1000", "--entry", "102450", "--stop", "100200"]) == 0
     size_out = capsys.readouterr().out

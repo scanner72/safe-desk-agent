@@ -1,0 +1,8 @@
+{
+  "_comment": "SIMULATED MCP-shaped ticker. Paste a real tool result in a live session. Not a REST call. Not a secret.",
+  "symbol": "BTCUSDT",
+  "lastPrice": "102450.00",
+  "bidPrice": "102448.50",
+  "askPrice": "102451.20",
+  "priceChangePercent": "1.80"
+}

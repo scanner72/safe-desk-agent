@@ -3,7 +3,7 @@
 **SIMULATED.** This is a shot list plus a continuous chat you can read aloud. Numbers match `examples/btc-ohlcv.csv` and `python -m safe_desk`. Not live PnL.
 
 Voice-over: [docs/demo-script.md](../docs/demo-script.md).  
-Split transcripts: [01](01-account-balance.md) → [02](02-price-check.md) → [03](03-analyze-signal.md) → [04](04-propose-trade.md) → [05](05-approval-dry-run.md) → [06](06-refusal-withdrawal.md).  
+Split transcripts: [01](01-account-balance.md) → [02](02-price-check.md) → [03](03-analyze-signal.md) → [08](08-proof-and-policy.md) → [04](04-propose-trade.md) → [05](05-approval-dry-run.md) → [06](06-refusal-withdrawal.md).  
 Offline CLI capture: [07-cli-offline.md](07-cli-offline.md).
 
 Keep **dry-run** on. Do not say `ENABLE LIVE` on camera unless you intend a tiny real order.
@@ -17,6 +17,8 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
 python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT
+python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
+python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
 ```
 
 Open three panes:
@@ -31,11 +33,12 @@ Open three panes:
 
 | Time | Show | Type / say |
 |---|---|---|
-| 0:00–0:10 | README + MCP URL | “Safe Desk. Track A. Official Binance MCP. Dry-run.” |
-| 0:10–0:20 | Chat or terminal | `balance` **or** `price BTCUSDT` **or** the analyze CLI |
-| 0:20–0:35 | Analyze card | `analyze BTCUSDT` — SMA20/50, ATR, risk 20/100, BUY = setup only |
-| 0:35–0:50 | Ticket | `propose` → `TKT-20260905-160000` `AWAITING_APPROVAL` — agent **stops** |
-| 0:50–1:10 | Gate | type `ok` (rejected) then `OK TKT-20260905-160000` → simulated payload |
+| 0:00–0:08 | README + MCP URL | “Safe Desk. Track A. Official Binance MCP. Dry-run.” |
+| 0:08–0:18 | Chat or terminal | `balance` **or** `price BTCUSDT` **or** the analyze CLI |
+| 0:18–0:28 | Analyze card | `analyze BTCUSDT` — SMA20/50, ATR, risk 20/100, BUY = setup only |
+| 0:28–0:40 | Proof + policy | analog APPROVE/WAIT + policy PASS (withdraw would FAIL) |
+| 0:40–0:52 | Ticket | `propose` → `TKT-20260905-160000` `AWAITING_APPROVAL` — agent **stops** |
+| 0:52–1:10 | Gate | type `ok` (rejected) then `OK TKT-20260905-160000` → simulated payload |
 | 1:10–1:25 | Refuse | `withdraw 50 USDT to my wallet` → **No** |
 | 1:25–1:30 | README disclaimer | “No live PnL on this tape.” |
 
@@ -51,7 +54,11 @@ If you need the full 90 seconds, linger on the ticket fields (1% risk, qty `0.00
 
 **User:** `analyze BTCUSDT`
 
-**Agent:** Last **102,450.00**. SMA20 **101,528.94**. SMA50 **99,890.87**. ATR 0.69% → **LOW**. Trend **BULL**. Risk **20 / 100**. Signal **BUY** (setup only — not an order).
+**Agent:** Last **102,450.00**. SMA20 **101,528.94**. SMA50 **99,890.87**. ATR 0.69% → **LOW**. Trend **BULL**. Risk **20 / 100**. Signal **BUY** (setup only — not an order). Offline CSV used because this tape is a rehearsal — not a live chart.
+
+**User:** `proof BTCUSDT` then `policy check`
+
+**Agent:** Proof **APPROVE** or **WAIT** (leakage-safe analogs, receipt hash shown). Policy **PASS** for BTCUSDT / 1% / notional 455. Withdrawals remain refused.
 
 **User:** `propose 1% risk`
 

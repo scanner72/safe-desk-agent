@@ -13,5 +13,8 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest
       - run: python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT
+      - run: python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
+      - run: python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
+      - run: python -m safe_desk quote --price-json examples/mcp-price.json --balance-json examples/mcp-balance.json
       - run: python -m safe_desk size --equity 1000 --entry 102450 --stop 100200
-      - run: python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 --entry 102450 --stop 100200 --tp 106950
+      - run: python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 --entry 102450 --stop 100200 --tp 106950 --proof-csv examples/btc-ohlcv.csv

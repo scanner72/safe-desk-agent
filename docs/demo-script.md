@@ -15,9 +15,12 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
 python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT
+python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
+python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
 python -m safe_desk size --equity 1000 --entry 102450 --stop 100200
 python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
-  --entry 102450 --stop 100200 --tp 106950
+  --entry 102450 --stop 100200 --tp 106950 \
+  --proof-csv examples/btc-ohlcv.csv
 ```
 
 4. Dry-run stays on. Do not enable live on camera unless you intend a tiny real order.
@@ -30,7 +33,7 @@ Connect is one URL: agent.binance.com/mcp/agentic. I log in in the browser. I fu
 
 Price and analyze are reads: SMA 20 and 50, ATR, a 0 to 100 risk score. A BUY here is a setup label, not an order.
 
-The agent writes a ticket: size, stop, take-profit, one percent of the Agentic wallet — then it waits. A bare “ok” is rejected. I have to send OK plus the ticket id.
+Before a ticket, two extra gates: a leakage-safe analog proof, and a desk policy — allowlist, one percent risk, no withdrawals. Then the agent writes the ticket and waits. A bare “ok” is rejected. I have to send OK plus the ticket id.
 
 We are in dry-run, so it prints the exact MCP payload and does not place. No live PnL on this tape.
 
@@ -41,10 +44,11 @@ If I ask to withdraw, it refuses. That is the product: a copilot that can see th
 | Time | Type / show |
 |---|---|
 | 0:00 | README + MCP URL |
-| 0:10 | `price BTCUSDT` or helper analyze |
-| 0:20 | `analyze BTCUSDT` |
-| 0:35 | `propose 1% risk` → ticket `AWAITING_APPROVAL` |
-| 0:50 | `ok` (rejected) then `OK TKT-20260905-160000` (simulated) |
+| 0:08 | `price BTCUSDT` / `balance` (MCP) or helper analyze |
+| 0:18 | `analyze BTCUSDT` |
+| 0:28 | proof + policy cards (or the two CLI commands) |
+| 0:40 | `propose 1% risk` → ticket `AWAITING_APPROVAL` |
+| 0:52 | `ok` (rejected) then `OK TKT-20260905-160000` (simulated) |
 | 1:10 | `withdraw 50 USDT to my wallet` → refuse |
 | 1:25 | Disclaimer: SIMULATED, not live PnL |
 

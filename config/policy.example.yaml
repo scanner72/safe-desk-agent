@@ -1,0 +1,28 @@
+# Safe Desk desk-level policy (example).
+# Copy to config/policy.yaml and edit. No secrets — this is not an API key file.
+#
+# Hard rules that this file cannot disable:
+#   - withdrawals / transfer-out / main→Agentic pull always refuse
+#   - max_risk_pct is capped at 1.0 even if you write a higher number
+#   - official MCP only: https://agent.binance.com/mcp/agentic
+
+version: 1
+emergency_stop: false
+product_default: SPOT
+venue: agentic_subaccount_only
+
+symbols:
+  allowlist:
+    - BTCUSDT
+    - ETHUSDT
+    - SOLUSDT
+    - BNBUSDT
+
+risk:
+  max_risk_pct: 1.0
+  max_notional_quote: 5000.0
+
+daily_caps:
+  max_loss_quote: 50.0
+  max_volume_quote: 10000.0
+  timezone: UTC

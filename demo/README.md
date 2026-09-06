@@ -18,3 +18,4 @@ Start here if you are judging on a plane:
 5. [05-approval-dry-run.md](05-approval-dry-run.md)
 6. [06-refusal-withdrawal.md](06-refusal-withdrawal.md)
 7. [07-cli-offline.md](07-cli-offline.md)
+8. [08-proof-and-policy.md](08-proof-and-policy.md)

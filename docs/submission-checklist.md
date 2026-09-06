@@ -66,11 +66,15 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
 python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT
+python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
+python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
 ```
 
 - [ ] `pip install -e ".[dev]"` succeeds
 - [ ] `pytest` is green
 - [ ] Analyze prints `DRY-RUN`, last `102,450.00`, trend `BULL`, signal `BUY` (setup only)
+- [ ] Proof prints a verdict + receipt hash (not a live win rate)
+- [ ] Policy PASS for the demo ticket; `policy check --intent withdraw` fails
 
 ## 8. After you post
 

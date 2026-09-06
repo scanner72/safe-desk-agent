@@ -40,4 +40,6 @@ Reasons (from `python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUS
 - LOW volatility (ATR 0.69% of price).
 - Signal BUY is a setup label, not an order.
 
-I am **not** sending a trade. If you want size + SL/TP against the 1,000 USDT Agentic box, say `propose`.
+Live path (when MCP is connected): I would have called the official market tool at `https://agent.binance.com/mcp/agentic`, then passed last / equity into `python -m safe_desk` via `--price-json` / `--balance-json`. This helper does not call Binance REST and holds no API keys.
+
+I am **not** sending a trade. Next gates: `proof BTCUSDT` and `policy check`, then `propose` if you want a ticket. See [08-proof-and-policy.md](08-proof-and-policy.md) and [prompts/LIVE_VS_OFFLINE.md](../prompts/LIVE_VS_OFFLINE.md).

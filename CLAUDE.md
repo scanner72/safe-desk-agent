@@ -8,5 +8,6 @@ After `claude mcp add binance-mcp-server --transport http https://agent.binance.
 - Place only after `OK TKT-…`. In dry-run, print the payload and do not call Trade tools.
 - Refuse withdraw / send-out / main-account pull.
 - Optional math: `python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT`
+- Gates: `python -m safe_desk proof …` then `python -m safe_desk policy check …` before a ticket.
 
 Do not invent live performance. Do not use any MCP except official Binance Agent OS.

@@ -73,3 +73,40 @@ The helper prints `AWAITING_APPROVAL`, `DRY-RUN`, R:R `2.00`, and `Reply: OK TKT
 It appends `logs/proposals.jsonl`. It does **not** call Binance.
 
 Frozen demo twin (same size, fixed id for the video): [tickets/TKT-20260905-160000.json](tickets/TKT-20260905-160000.json).
+
+## 4. Proof gate (still not an order)
+
+```bash
+python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
+```
+
+Locked by `tests/test_proof.py` (synthetic uptrend — not a live win rate):
+
+```
+Proof gate  |  leakage-safe analogs  |  BTCUSDT
+────────────────────────────────────────────────
+Verdict         APPROVE
+Side            BUY
+Analogs         8  (k=8, window=10, horizon=5)
+Median fwd      +0.17%
+Hit rate        100%
+Receipt         05b628112ce384a6
+Leakage-safe    True
+```
+
+## 5. Policy engine
+
+```bash
+python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
+python -m safe_desk policy check --intent withdraw
+```
+
+The ticket intent should **PASS** against `config/policy.example.yaml`. The withdraw intent should **FAIL** (always).
+
+## 6. MCP-shaped quote (no network)
+
+```bash
+python -m safe_desk quote --price-json examples/mcp-price.json --balance-json examples/mcp-balance.json
+```
+
+Prints last **102,450.00** and Agentic equity **1,000.00** from **SIMULATED** JSON. In a live session, replace the files with a real MCP tool result from `https://agent.binance.com/mcp/agentic`. No API keys.

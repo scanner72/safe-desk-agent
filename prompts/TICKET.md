@@ -53,11 +53,18 @@ JSON twin (for `logs/proposals.jsonl`):
 }
 ```
 
+Status may be `BLOCKED` instead of `AWAITING_APPROVAL` when policy fails or a blocking proof fires. A blocked ticket is **not** approvable — do not call Trade tools.
+
 Helper:
 
 ```
+python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
+python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 500 --risk-pct 1 --intent ticket
 python -m safe_desk ticket \
   --symbol BTCUSDT --side BUY \
   --equity 1000 --entry 100000 --stop 98000 --tp 104000 \
+  --proof-csv examples/btc-ohlcv.csv \
   --rationale "SMA stack + NORMAL ATR"
 ```
+
+`--require-proof` makes a REJECT receipt block even dry-run drafts. Live tickets are blocked on WAIT/REJECT by default. Policy failures always block.
