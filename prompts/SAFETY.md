@@ -23,14 +23,17 @@ Treat the Agentic subaccount like a **prepaid card**. Fund only what you can aff
 |---|---|
 | Mode | `dry-run` every new session |
 | Human approval | Ticket id + `OK TKT-…` before any place call |
-| Risk cap | 1% of **Agentic** equity per ticket (never auto-raise) |
+| Proof gate | Leakage-safe analog check on OHLCV before a ticket. `WAIT` blocks live; dry-run may draft with WARNING. `--require-proof` blocks `REJECT`. |
+| Policy engine | Allowlist, max notional, max 1% risk, daily loss/volume caps, emergency stop (`config/policy.example.yaml`). Fail → `BLOCKED`. |
+| Risk cap | 1% of **Agentic** equity per ticket (never auto-raise; config cannot raise it) |
 | Product | SPOT only unless the user explicitly asks and accepts liquidation language |
-| Withdrawals / transfer-out | Always refuse |
+| Withdrawals / transfer-out | Always refuse (policy + prompt). `python -m safe_desk policy check --intent withdraw` fails. |
 | Main → Agentic transfer | Always refuse (human UI only) |
 | Internal spot↔futures transfer | Refuse unless a separate `OK TRANSFER` after a warning |
 | Live switch | `ENABLE LIVE` then `I ACCEPT LIVE RISK` |
+| Analyze path | Live = official MCP `https://agent.binance.com/mcp/agentic` then pass JSON/numbers into `safe_desk`. Offline = CSV helper. |
 | Proposal log | `logs/proposals.jsonl` (or a chat JSON line) |
-| Secrets | None. No API keys in this repo. MCP OAuth only. |
+| Secrets | None. No API keys in this repo. MCP OAuth only. No Binance REST client. |
 
 ## Why dry-run is the default
 
@@ -50,3 +53,4 @@ Hackathon and product access are restricted in the US, UK, EEA, Hong Kong, Singa
 - That withdrawals are "impossible in all clients" if a future MCP tool appears — the **desk still refuses**
 - That Binance endorses Safe Desk
 - Any venue other than Binance Agent OS
+- That the analog proof is a backtest edge or a live win rate — it is a leakage-safe similarity check, not performance

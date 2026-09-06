@@ -1,0 +1,8 @@
+{
+  "_comment": "SIMULATED MCP-shaped Agentic balance. Size only against this box, not the main book. Not a secret.",
+  "account": "agentic",
+  "balances": [
+    {"asset": "USDT", "free": "1000.00", "locked": "0.00"},
+    {"asset": "BTC", "free": "0.00", "locked": "0.00"}
+  ]
+}

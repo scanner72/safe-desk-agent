@@ -3,14 +3,15 @@
 **Risk-first trading copilot for [Binance Agent OS](https://www.binance.com/en/agent-os).**  
 Track A — Mini Hackathon (deadline **8 Sep 2026 23:59 UTC**).
 
-Safe Desk turns any MCP-compatible LLM (Claude, ChatGPT, Cursor, Codex) into a desk clerk: read the Agentic subaccount, score a simple setup, write a ticket, **wait for a human OK**, then optionally place through the **official Binance MCP**.
+Safe Desk turns any MCP-compatible LLM (Claude, ChatGPT, Cursor, Codex) into a desk clerk: read the Agentic subaccount, score a simple setup, run a leakage-safe analog **proof**, apply a desk **policy**, write a ticket, **wait for a human OK**, then optionally place through the **official Binance MCP**.
 
 - Venue: Agentic subaccount only
 - No withdrawals, no transfer-out
 - **Dry-run by default**
 - **Human approval (`OK TKT-…`) before any trade**
+- **Proof + policy gates** before `AWAITING_APPROVAL`
 - Max **1%** of Agentic equity per ticket
-- No API secrets in this repo — MCP does market data and trading
+- No API secrets in this repo — MCP does market data and trading (no Binance REST keys)
 
 > Not financial advice. Not a live track record. Demo numbers are labeled **SIMULATED**. This project is unofficial and not endorsed by Binance.
 
@@ -57,6 +58,17 @@ Script: [docs/demo-script.md](docs/demo-script.md) · Shot list: [demo/WALKTHROU
 
 Do not invent live PnL. Keep dry-run on. A bare `ok` must fail; only `OK TKT-…` continues.
 
+### Live path vs offline path
+
+Details: [prompts/LIVE_VS_OFFLINE.md](prompts/LIVE_VS_OFFLINE.md).
+
+| Path | When | What you run |
+|---|---|---|
+| **Live** | Official MCP is connected at `https://agent.binance.com/mcp/agentic` | LLM calls price / balance / klines, then passes JSON or numbers into `safe_desk quote` / `analyze` / `ticket` (`--price-json`, `--balance-json`). No REST API keys. |
+| **Offline** | Hackathon demo without auth | CSV helper below. Say the bars are **synthetic**. |
+
+Both paths still do **proof → policy → ticket → wait for `OK TKT-…`**. Dry-run stays the default.
+
 ### Offline CLI (works without MCP)
 
 Synthetic daily bars in `examples/btc-ohlcv.csv` — not a live chart.
@@ -66,28 +78,35 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
 python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT
+python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
+python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
+python -m safe_desk quote --price-json examples/mcp-price.json --balance-json examples/mcp-balance.json
 python -m safe_desk size --equity 1000 --entry 102450 --stop 100200
 python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
-  --entry 102450 --stop 100200 --tp 106950
+  --entry 102450 --stop 100200 --tp 106950 \
+  --proof-csv examples/btc-ohlcv.csv
 ```
 
 `analyze` should print **DRY-RUN**, last **102,450.00**, trend **BULL**, vol **LOW**, risk **20 / 100**, signal **BUY** (setup only). Full expected printout: [demo/07-cli-offline.md](demo/07-cli-offline.md). Use `python3` if `python` is missing.
+
+`examples/mcp-*.json` are **SIMULATED** MCP-shaped payloads for rehearsal (same numbers as the CSV). In a live session, replace them with a real MCP tool result.
 
 ### 60–90s video script
 
 Speak this (or the longer cut in [docs/demo-script.md](docs/demo-script.md)):
 
-> Safe Desk is a Track A agent for Binance Agent OS. Official MCP only: agent.binance.com/mcp/agentic. I fund the Agentic subaccount myself — the agent cannot pull from main and cannot withdraw. Analyze is a read: SMA 20 and 50, ATR, a 0-to-100 risk score. A BUY here is a setup label, not an order. The agent writes a ticket at one percent of the Agentic wallet, then it waits. A bare “ok” is rejected. I send OK plus the ticket id. Dry-run prints the MCP payload and does not place. No live PnL on this tape. If I ask to withdraw, it refuses.
+> Safe Desk is a Track A agent for Binance Agent OS. Official MCP only: agent.binance.com/mcp/agentic. I fund the Agentic subaccount myself — the agent cannot pull from main and cannot withdraw. Analyze is a read: SMA 20 and 50, ATR, a 0-to-100 risk score. A BUY here is a setup label, not an order. Before a ticket, an analog proof and a desk policy must pass. The agent writes a ticket at one percent of the Agentic wallet, then it waits. A bare “ok” is rejected. I send OK plus the ticket id. Dry-run prints the MCP payload and does not place. No live PnL on this tape. If I ask to withdraw, it refuses.
 
 On-screen in the same window:
 
 | Time | Show |
 |---|---|
 | 0:00 | README + MCP URL |
-| 0:10 | `price BTCUSDT` or the analyze CLI above |
-| 0:20 | `analyze BTCUSDT` |
-| 0:35 | `propose` → ticket `AWAITING_APPROVAL` |
-| 0:50 | `ok` rejected, then `OK TKT-…` → `status: simulated` |
+| 0:08 | `price BTCUSDT` / `balance` (MCP) **or** offline analyze CLI |
+| 0:18 | `analyze BTCUSDT` |
+| 0:28 | proof + policy (CLI or agent card) |
+| 0:40 | `propose` → ticket `AWAITING_APPROVAL` |
+| 0:52 | `ok` rejected, then `OK TKT-…` → `status: simulated` |
 | 1:10 | `withdraw 50 USDT` → refuse |
 
 If MCP auth fails, say so and cut to the helper. Do not fake a fill.
@@ -102,6 +121,7 @@ Exchange-level (Binance) and desk-level (this repo) — both required. Details: 
 |---|---|
 | Mode | `dry-run` every new session |
 | Approval | `OK TKT-<id>` only — not a bare “ok” |
+| Proof / policy | Analog gate + allowlist / notional / 1% / daily caps / emergency stop before a ticket |
 | Risk | ≤ 1% of **Agentic** equity; never auto-raise |
 | Product | SPOT (futures only after an explicit ask + liquidation warning) |
 | Withdraw / send-out / main sweep | Always refuse |
@@ -122,6 +142,8 @@ Natural language is fine. Canonical forms:
 | Account | `balance`, `account` | No |
 | Price | `price BTCUSDT` | No |
 | Analyze | `analyze BTCUSDT`, `signal BTCUSDT` | No |
+| Proof | `proof BTCUSDT` | No — gate |
+| Policy | `policy check` | No — fail blocks ticket |
 | Propose | `propose`, `ticket` | No — wait |
 | Approve | `OK TKT-20260905-160000` | Dry-run: simulate. Live: yes |
 | Cancel | `CANCEL TKT-…` | No |
@@ -137,8 +159,11 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
 python -m safe_desk size --equity 1000 --entry 102450 --stop 100200
+python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
+python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
 python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
-  --entry 102450 --stop 100200 --tp 106950
+  --entry 102450 --stop 100200 --tp 106950 \
+  --proof-csv examples/btc-ohlcv.csv
 ```
 
 Stdlib only at runtime. MCP still does the trading.
@@ -150,10 +175,12 @@ Stdlib only at runtime. MCP still does the trading.
 ```
 prompts/SYSTEM.md               canonical agent spec
 prompts/SAFETY.md               exchange + desk controls
+prompts/LIVE_VS_OFFLINE.md      MCP live path vs CSV offline path
 prompts/COMMANDS.md             intents
 prompts/TICKET.md               ticket template
 skills/safe-desk-agent/         portable skill
-src/safe_desk/                  SMA, ATR, 1% sizing, tickets
+src/safe_desk/                  SMA, ATR, 1% sizing, proof, policy, tickets
+config/policy.example.yaml      desk policy (no secrets)
 docs/architecture.md
 docs/submission.md              how to enter
 docs/submission-checklist.md    day-of boxes (follow / repost / reply / survey)

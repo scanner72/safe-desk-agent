@@ -38,7 +38,7 @@ Keep it honest. Do not show invented live PnL.
 1. README + safety model (5–10s).
 2. MCP connected to `https://agent.binance.com/mcp/agentic`.
 3. `balance` or `price BTCUSDT` via MCP (or a clearly labeled dry-run if auth is not available on camera).
-4. `analyze BTCUSDT` → ticket with 1% risk, SL/TP.
+4. `analyze BTCUSDT` → proof → policy → ticket with 1% risk, SL/TP.
 5. Agent **waits**. You type `OK TKT-…`. Dry-run simulates, does not brag about profit.
 6. You ask to withdraw. Agent **refuses**.
 

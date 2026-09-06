@@ -80,6 +80,13 @@ _EN: dict[str, str] = {
     "default_invalidation": "Daily close through stop {stop:g} cancels the idea.",
     "venue": "Binance Agentic subaccount only",
     "mcp_action": "none until the user says OK on this ticket id",
+    "mcp_blocked": "blocked — no place path (policy or proof gate)",
+    "live_path": "Safe Desk  |  LIVE PATH  |  MCP-shaped inputs (no REST, no secrets)",
+    "offline_path": "Safe Desk  |  OFFLINE PATH  |  local CSV / numbers only",
+    "proof_header": "Proof gate  |  leakage-safe analogs  |  {symbol}",
+    "policy_header": "Policy engine  |  {intent}",
+    "policy_pass": "PASS — place path may continue to a ticket (still waits for OK TKT-…).",
+    "policy_fail": "FAIL — no AWAITING_APPROVAL ticket.",
     "disclaimer": (
         "Not financial advice. This ticket is a proposal, not an order. "
         "Safe Desk never withdraws. Dry-run is the default. "

@@ -11,7 +11,7 @@ from safe_desk.i18n import Lang, t
 from safe_desk.position_sizing import SizeResult, size_spot
 
 Mode = Literal["dry-run", "live"]
-Status = Literal["awaiting_approval", "cancelled", "simulated", "rejected"]
+Status = Literal["awaiting_approval", "cancelled", "simulated", "rejected", "blocked"]
 Side = Literal["BUY", "SELL"]
 
 
@@ -50,6 +50,8 @@ class TradeTicket:
     mcp_action: str
     disclaimer: str
     lang: Lang = "en"
+    proof: dict[str, Any] | None = None
+    policy: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -127,6 +129,10 @@ def build_ticket(
     size: SizeResult | None = None,
     when: datetime | None = None,
     lang: Lang = "en",
+    status: Status = "awaiting_approval",
+    proof: dict[str, Any] | None = None,
+    policy: dict[str, Any] | None = None,
+    mcp_action: str | None = None,
 ) -> TradeTicket:
     when = when or utc_now()
     sized = size or size_spot(equity, entry, stop, risk_pct, lang=lang)
@@ -136,15 +142,18 @@ def build_ticket(
         notes.extend(extra_notes)
     if rr is not None and rr < 1.0:
         notes.append(t(lang, "rr_low", rr=rr))
-    if mode == "live":
+    if mode == "live" and status != "blocked":
         notes.append(t(lang, "live_still_waits"))
     rationale = rationale or t(lang, "default_rationale")
     invalidation = invalidation or t(lang, "default_invalidation", stop=stop)
+    action = mcp_action
+    if action is None:
+        action = t(lang, "mcp_blocked") if status == "blocked" else t(lang, "mcp_action")
     return TradeTicket(
         id=ticket_id(when),
         created_at=when.isoformat(timespec="seconds"),
         mode=mode,
-        status="awaiting_approval",
+        status=status,
         venue=t(lang, "venue"),
         product=product,
         symbol=symbol.upper(),
@@ -162,9 +171,11 @@ def build_ticket(
         rationale=rationale,
         invalidation=invalidation,
         notes=notes,
-        mcp_action=t(lang, "mcp_action"),
+        mcp_action=action,
         disclaimer=t(lang, "disclaimer"),
         lang=lang,
+        proof=proof,
+        policy=policy,
     )
 
 

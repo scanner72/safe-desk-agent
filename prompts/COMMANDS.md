@@ -6,13 +6,17 @@ Natural language is fine. The left column is the canonical form.
 |---|---|---|---|
 | Account | `balance`, `account`, `what's in the box` | Account (auth) | No |
 | Price | `price BTCUSDT`, `what's ETH` | Market data | No |
-| Analyze | `analyze BTCUSDT`, `signal SOLUSDT daily` | Market data (klines) | No |
-| Propose | `propose a long`, `ticket 1% risk`, `size this` | Account (equity) | Ticket created; **wait** |
+| Analyze | `analyze BTCUSDT`, `signal SOLUSDT daily` | Market data (klines) or offline CSV | No |
+| Proof | `proof BTCUSDT`, `analog check` | No (local OHLCV) | No — gate only |
+| Policy | `policy check`, `is this allowed` | No | Fail → no ticket |
+| Propose | `propose a long`, `ticket 1% risk`, `size this` | Account (equity) | Ticket created only if gates pass; **wait** |
 | Approve | `OK TKT-20260905-160000` | Trade, only after OK, and only if live | Yes — this *is* the approval |
 | Cancel | `CANCEL TKT-…` | No | N/A |
 | Live on | `ENABLE LIVE` then `I ACCEPT LIVE RISK` | No | Two phrases |
 | Live off | `DRY-RUN` | No | Immediate |
 | Forbidden | `withdraw 100 USDT`, `send to 0x…`, `transfer to main` | Must not call | Hard refuse |
+
+Live vs offline: [LIVE_VS_OFFLINE.md](LIVE_VS_OFFLINE.md). MCP endpoint: `https://agent.binance.com/mcp/agentic`.
 
 ## Analyze card (copy this shape)
 
@@ -30,6 +34,14 @@ Optional: run the helper so the score is reproducible:
 
 ```
 python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT
+python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
+python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
+```
+
+Live-path overlay (MCP JSON the model already fetched):
+
+```
+python -m safe_desk quote --price-json /tmp/mcp-price.json --balance-json /tmp/mcp-balance.json
 ```
 
 ## Ticket approval phrases

@@ -13,18 +13,21 @@ Docs: https://developers.binance.com/en/docs/agent-native/mcp-server
 ## Loop
 
 ```
-read / price / analyze  →  ticket TKT-…  →  WAIT  →  OK TKT-…  →  optional MCP trade
+read / price / analyze  →  proof  →  policy  →  ticket TKT-…  →  WAIT  →  OK TKT-…
 ```
 
-1. **Analyze** with MCP market data and/or `python -m safe_desk analyze`.
-2. **Ticket** with size, SL, TP, risk ≤ 1% of **Agentic** equity. Status `awaiting_approval`.
-3. **Wait.** Do not call Trade tools.
-4. **OK TKT-…** only. Then re-quote. Dry-run simulates. Live places once.
+1. **Analyze** — live path: MCP at `https://agent.binance.com/mcp/agentic` (price / balance / klines), then pass JSON or numbers into `safe_desk`. Offline path: `python -m safe_desk analyze` on a CSV. See [prompts/LIVE_VS_OFFLINE.md](../../prompts/LIVE_VS_OFFLINE.md).
+2. **Proof** — `python -m safe_desk proof`. APPROVE / WAIT / REJECT. `WAIT` blocks live; dry-run may draft with WARNING. `--require-proof` blocks REJECT.
+3. **Policy** — `python -m safe_desk policy check` (allowlist, notional, 1% risk, daily caps, emergency stop). Fail → `BLOCKED`, no `AWAITING_APPROVAL`.
+4. **Ticket** — size, SL, TP, risk ≤ 1% of **Agentic** equity. Status `awaiting_approval` only if gates pass.
+5. **Wait.** Do not call Trade tools.
+6. **OK TKT-…** only. Then re-quote. Dry-run simulates. Live places once.
 
 ## Hard stops
 
-- Refuse withdrawals, transfer-out, and main→Agentic pulls.
+- Refuse withdrawals, transfer-out, and main→Agentic pulls. Policy check always fails those intents.
 - Dry-run every new session. Live requires `ENABLE LIVE` then `I ACCEPT LIVE RISK`.
+- Do not emit `AWAITING_APPROVAL` if policy failed or a blocking proof fired (`BLOCKED`).
 - Cap risk at 1%. Never raise it.
 - SPOT default. Futures/margin only after an explicit ask and a liquidation warning.
 - Discover real MCP tool names. Do not invent endpoints. No API keys.
@@ -42,8 +45,11 @@ read / price / analyze  →  ticket TKT-…  →  WAIT  →  OK TKT-…  →  op
 
 ```
 python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT
-python -m safe_desk size --equity 1000 --entry 100000 --stop 98000
-python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 --entry 100000 --stop 98000 --tp 104000
+python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
+python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
+python -m safe_desk quote --price-json examples/mcp-price.json --balance-json examples/mcp-balance.json
+python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 --entry 100000 --stop 98000 --tp 104000 \
+  --proof-csv examples/btc-ohlcv.csv
 ```
 
 ## Disclaimer

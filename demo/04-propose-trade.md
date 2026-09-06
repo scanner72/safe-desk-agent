@@ -12,10 +12,13 @@ propose a long, 1% risk, stop under the swing
 
 Using last 102,450, stop 100,200 (~3.2× ATR under the last higher low), TP 106,950 (about 2R). Risk cap stays 1%.
 
+Proof and policy already ran ([08-proof-and-policy.md](08-proof-and-policy.md)). Policy **PASS**. Proof is not REJECT, so dry-run may draft.
+
 ```
 python -m safe_desk ticket \
   --symbol BTCUSDT --side BUY \
   --equity 1000 --entry 102450 --stop 100200 --tp 106950 \
+  --proof-csv examples/btc-ohlcv.csv \
   --rationale "Daily SMA stack BULL, ATR LOW, stop ~3.2x ATR"
 ```
 
