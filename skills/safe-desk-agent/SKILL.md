@@ -50,6 +50,7 @@ python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --ri
 python -m safe_desk quote --price-json examples/mcp-price.json --balance-json examples/mcp-balance.json
 python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 --entry 100000 --stop 98000 --tp 104000 \
   --proof-csv examples/btc-ohlcv.csv
+python -m safe_desk serve --port 8080
 ```
 
 ## Disclaimer

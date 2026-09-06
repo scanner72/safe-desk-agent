@@ -25,6 +25,15 @@ python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
 
 4. Dry-run stays on. Do not enable live on camera unless you intend a tiny real order.
 
+Optional (same numbers, easier to film):
+
+```bash
+python -m safe_desk serve --port 8080
+# or: docker compose up --build
+```
+
+Then click Analyze → Proof → Policy → Propose ticket → `ok` → `OK TKT-…` → withdraw.
+
 ## Voice-over (copy this, ~60–75 seconds)
 
 Safe Desk is a Track A agent for Binance Agent OS. It turns Claude or Cursor into a risk-first copilot on the official MCP.

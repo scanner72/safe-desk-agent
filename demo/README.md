@@ -19,3 +19,4 @@ Start here if you are judging on a plane:
 6. [06-refusal-withdrawal.md](06-refusal-withdrawal.md)
 7. [07-cli-offline.md](07-cli-offline.md)
 8. [08-proof-and-policy.md](08-proof-and-policy.md)
+9. [09-ui-docker.md](09-ui-docker.md)
