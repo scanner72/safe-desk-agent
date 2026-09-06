@@ -72,6 +72,9 @@ prompts/SAFETY.md     exchange + desk controls
 prompts/COMMANDS.md   intents
 prompts/TICKET.md     ticket / log schema
 skills/…/SKILL.md     portable skill
-src/safe_desk/        local math (SMA, ATR, 1% sizing, tickets)
-demo/                 labeled SIMULATED transcripts
+src/safe_desk/                 local math (SMA, ATR, 1% sizing, tickets)
+docs/submission.md             how to enter
+docs/submission-checklist.md   day-of follow / repost / reply / survey
+docs/x-submission-draft.md     ready-to-paste English X text
+demo/                          labeled SIMULATED transcripts
 ```

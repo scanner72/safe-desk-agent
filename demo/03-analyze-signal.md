@@ -21,15 +21,17 @@ args      { "symbol": "BTCUSDT", "interval": "1d", "limit": 80 }
 
 ```
 Safe Desk  |  DRY-RUN  |  BTCUSDT
-Bars           80
-Last           102,450.00
-SMA20          101,528.94
-SMA50           99,890.87
-ATR(14)        702.18  (0.69%)
-Trend          BULL
-Vol regime     LOW
-Risk score     20 / 100
-Signal         BUY  (setup only — not an order)
+────────────────────────────────────────────────
+Bars          80
+Last          102,450.00
+SMA20         101,528.94
+SMA50         99,890.87
+ATR(14)       702.1791  (0.69%)
+Realized vol  1.8% ann.
+Trend         BULL
+Vol regime    LOW
+Risk score    20 / 100
+Signal        BUY  (setup only — not an order)
 ```
 
 Reasons (from `python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT`):

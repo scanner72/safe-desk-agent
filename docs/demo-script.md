@@ -1,15 +1,28 @@
-# 60-second demo script
+# 60–90 second demo script
 
-Speak this while screen-recording. Numbers match [demo/](../demo/) and `examples/btc-ohlcv.csv` so you can rehearse offline. If MCP auth works on camera, replace the helper printout with a real `price` / `balance` tool result. Do **not** invent PnL.
+Speak this while screen-recording. Numbers match [demo/](../demo/) and `examples/btc-ohlcv.csv` so you can rehearse offline. Shot list: [demo/WALKTHROUGH.md](../demo/WALKTHROUGH.md). If MCP auth works on camera, replace the helper printout with a real `price` / `balance` tool result. Do **not** invent PnL.
+
+**Video URL placeholder (paste after upload):** `https://x.com/REPLACE_ME` or YouTube unlisted.
 
 ## Setup
 
 1. Claude Code, Cursor, ChatGPT, or Codex with [`prompts/SYSTEM.md`](../prompts/SYSTEM.md) loaded.
 2. MCP added: `https://agent.binance.com/mcp/agentic`.
-3. Terminal ready: `python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT`
+3. Terminal ready with the exact offline commands:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+pytest
+python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT
+python -m safe_desk size --equity 1000 --entry 102450 --stop 100200
+python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
+  --entry 102450 --stop 100200 --tp 106950
+```
+
 4. Dry-run stays on. Do not enable live on camera unless you intend a tiny real order.
 
-## Voice-over (copy this, ~60 seconds)
+## Voice-over (copy this, ~60–75 seconds)
 
 Safe Desk is a Track A agent for Binance Agent OS. It turns Claude or Cursor into a risk-first copilot on the official MCP.
 
@@ -23,16 +36,17 @@ We are in dry-run, so it prints the exact MCP payload and does not place. No liv
 
 If I ask to withdraw, it refuses. That is the product: a copilot that can see the book and still waits for a human.
 
-## On-screen actions (same 60 seconds)
+## On-screen actions (60–90 seconds)
 
 | Time | Type / show |
 |---|---|
 | 0:00 | README + MCP URL |
 | 0:10 | `price BTCUSDT` or helper analyze |
 | 0:20 | `analyze BTCUSDT` |
-| 0:30 | `propose 1% risk` → ticket `AWAITING_APPROVAL` |
-| 0:40 | `ok` (rejected) then `OK TKT-…` (simulated) |
-| 0:50 | `withdraw 50 USDT to my wallet` → refuse |
+| 0:35 | `propose 1% risk` → ticket `AWAITING_APPROVAL` |
+| 0:50 | `ok` (rejected) then `OK TKT-20260905-160000` (simulated) |
+| 1:10 | `withdraw 50 USDT to my wallet` → refuse |
+| 1:25 | Disclaimer: SIMULATED, not live PnL |
 
 ## If MCP auth fails
 

@@ -50,22 +50,47 @@ Add a Streamable HTTP MCP server:
 
 ---
 
-## 60-second demo
+## Demo
 
-Full voice-over: [docs/demo-script.md](docs/demo-script.md).
+**Video (60–90s):** _paste a public X / YouTube / Drive URL here after you record_  
+Script: [docs/demo-script.md](docs/demo-script.md) · Shot list: [demo/WALKTHROUGH.md](demo/WALKTHROUGH.md) · Transcripts: [demo/](demo/) (all **SIMULATED**)
 
-1. Show MCP connected to `agent.binance.com/mcp/agentic`.
-2. `balance` — Agentic equity only.
-3. `analyze BTCUSDT` — SMA20/50, ATR, risk score 0–100.
-4. `propose` — ticket with size, SL/TP, **1%** risk. Agent **stops**.
-5. Bare `ok` is rejected. `OK TKT-…` in **dry-run** prints a simulated MCP payload — no live fill, no PnL claim.
-6. `withdraw 50 USDT` — **refused**.
+Do not invent live PnL. Keep dry-run on. A bare `ok` must fail; only `OK TKT-…` continues.
 
-Rehearse offline (synthetic CSV, not a live chart):
+### Offline CLI (works without MCP)
+
+Synthetic daily bars in `examples/btc-ohlcv.csv` — not a live chart.
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+pytest
 python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT
+python -m safe_desk size --equity 1000 --entry 102450 --stop 100200
+python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
+  --entry 102450 --stop 100200 --tp 106950
 ```
+
+`analyze` should print **DRY-RUN**, last **102,450.00**, trend **BULL**, vol **LOW**, risk **20 / 100**, signal **BUY** (setup only). Full expected printout: [demo/07-cli-offline.md](demo/07-cli-offline.md). Use `python3` if `python` is missing.
+
+### 60–90s video script
+
+Speak this (or the longer cut in [docs/demo-script.md](docs/demo-script.md)):
+
+> Safe Desk is a Track A agent for Binance Agent OS. Official MCP only: agent.binance.com/mcp/agentic. I fund the Agentic subaccount myself — the agent cannot pull from main and cannot withdraw. Analyze is a read: SMA 20 and 50, ATR, a 0-to-100 risk score. A BUY here is a setup label, not an order. The agent writes a ticket at one percent of the Agentic wallet, then it waits. A bare “ok” is rejected. I send OK plus the ticket id. Dry-run prints the MCP payload and does not place. No live PnL on this tape. If I ask to withdraw, it refuses.
+
+On-screen in the same window:
+
+| Time | Show |
+|---|---|
+| 0:00 | README + MCP URL |
+| 0:10 | `price BTCUSDT` or the analyze CLI above |
+| 0:20 | `analyze BTCUSDT` |
+| 0:35 | `propose` → ticket `AWAITING_APPROVAL` |
+| 0:50 | `ok` rejected, then `OK TKT-…` → `status: simulated` |
+| 1:10 | `withdraw 50 USDT` → refuse |
+
+If MCP auth fails, say so and cut to the helper. Do not fake a fill.
 
 ---
 
@@ -123,27 +148,31 @@ Stdlib only at runtime. MCP still does the trading.
 ## Repo map
 
 ```
-prompts/SYSTEM.md          canonical agent spec
-prompts/SAFETY.md          exchange + desk controls
-prompts/COMMANDS.md        intents
-prompts/TICKET.md          ticket template
-skills/safe-desk-agent/    portable skill
-src/safe_desk/             SMA, ATR, 1% sizing, tickets
+prompts/SYSTEM.md               canonical agent spec
+prompts/SAFETY.md               exchange + desk controls
+prompts/COMMANDS.md             intents
+prompts/TICKET.md               ticket template
+skills/safe-desk-agent/         portable skill
+src/safe_desk/                  SMA, ATR, 1% sizing, tickets
 docs/architecture.md
-docs/submission.md         how to enter the hackathon
-docs/demo-script.md        60-second voice-over
-demo/                      SIMULATED transcripts (not live PnL)
+docs/submission.md              how to enter
+docs/submission-checklist.md    day-of boxes (follow / repost / reply / survey)
+docs/x-submission-draft.md      ready-to-paste English X text
+docs/demo-script.md             60–90s voice-over
+demo/                           SIMULATED transcripts (not live PnL)
 ```
 
 ---
 
 ## Hackathon checklist
 
-See [docs/submission.md](docs/submission.md).
+Day-of boxes: [docs/submission-checklist.md](docs/submission-checklist.md).  
+X paste text: [docs/x-submission-draft.md](docs/x-submission-draft.md).  
+Background: [docs/submission.md](docs/submission.md).
 
 - [ ] Follow [@Binance](https://x.com/binance)
 - [ ] Repost https://x.com/binance/status/2094810011557838988
-- [ ] Reply/quote with **video + GitHub**
+- [ ] Reply/quote with **video + GitHub** (`https://github.com/scanner72/safe-desk-agent`)
 - [ ] Survey: https://www.binance.com/en/survey/2913aa200aac462c89a737779393f3d4
 - [ ] Before **2026-09-08 23:59 UTC**
 - [ ] Not in US, UK, EEA, HK, Singapore, or other prohibited regions
