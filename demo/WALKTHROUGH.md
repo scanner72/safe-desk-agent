@@ -21,11 +21,11 @@ python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
 python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
 ```
 
-Open three panes:
+Open two or three panes:
 
-1. README (this repo) with the MCP URL visible.
-2. Agent chat with `prompts/SYSTEM.md` loaded. MCP = `https://agent.binance.com/mcp/agentic` if login works.
-3. Terminal at the repo root (fallback if MCP auth fails).
+1. **Preferred:** `python -m safe_desk.web` → [http://127.0.0.1:8765](http://127.0.0.1:8765). Browser walkthrough: [09-web-ui.md](09-web-ui.md).
+2. README (this repo) with the MCP URL visible.
+3. Optional agent chat with `prompts/SYSTEM.md` loaded. MCP = `https://agent.binance.com/mcp/agentic` if login works. Terminal is a fallback, not the product.
 
 ---
 
@@ -33,14 +33,12 @@ Open three panes:
 
 | Time | Show | Type / say |
 |---|---|---|
-| 0:00–0:08 | README + MCP URL | “Safe Desk. Track A. Official Binance MCP. Dry-run.” |
-| 0:08–0:18 | Chat or terminal | `balance` **or** `price BTCUSDT` **or** the analyze CLI |
-| 0:18–0:28 | Analyze card | `analyze BTCUSDT` — SMA20/50, ATR, risk 20/100, BUY = setup only |
-| 0:28–0:40 | Proof + policy | analog APPROVE/WAIT + policy PASS (withdraw would FAIL) |
-| 0:40–0:52 | Ticket | `propose` → `TKT-20260905-160000` `AWAITING_APPROVAL` — agent **stops** |
-| 0:52–1:10 | Gate | type `ok` (rejected) then `OK TKT-20260905-160000` → simulated payload |
-| 1:10–1:25 | Refuse | `withdraw 50 USDT to my wallet` → **No** |
-| 1:25–1:30 | README disclaimer | “No live PnL on this tape.” |
+| 0:00–0:08 | Web dashboard **or** README + MCP URL | “Safe Desk. Track A. Official Binance MCP. Dry-run. No terminal required.” |
+| 0:08–0:22 | Analyze (sample CSV) | Plain-language why ENTER/WAIT/SKIP + 1% size. BUY = setup only. |
+| 0:22–0:40 | Ticket | Create ticket. Type `ok` (rejected) then `OK TKT-…` |
+| 0:40–0:55 | Paper journal | **SIMULATED / PAPER** fill. Not live PnL. |
+| 0:55–1:10 | Alerts | Withdraw refused. Proof/policy alerts if they fired. |
+| 1:10–1:30 | Optional CLI / agent | Same gates. Disclaimer: no live PnL. |
 
 If you need the full 90 seconds, linger on the ticket fields (1% risk, qty `0.00444444`, R:R 2.00) and the `status: simulated` line.
 

@@ -13,8 +13,10 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from safe_desk.alerts import emit_from_policy, emit_from_proof, read_alerts
 from safe_desk.i18n import Lang, norm_lang, t
 from safe_desk.indicators import atr, realized_vol, sma_last
+from safe_desk.journal import summarize as journal_summary
 from safe_desk.log import append_proposal
 from safe_desk.mcp_input import MCP_ENDPOINT, LiveQuote, load_live_quote
 from safe_desk.ohlcv import load_ohlcv
@@ -28,6 +30,7 @@ from safe_desk.position_sizing import size_spot
 from safe_desk.proof import ProofReport, proof_blocks_ticket, run_proof
 from safe_desk.risk import evaluate_setup
 from safe_desk.ticket import Status, build_ticket
+from safe_desk.why import explain_why
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -147,6 +150,27 @@ def main(argv: list[str] | None = None) -> int:
     quote.add_argument("--symbol", default=None)
     quote.add_argument("--json", action="store_true")
 
+    journal = sub.add_parser(
+        "journal",
+        parents=[shared],
+        help="Show the PAPER / SIMULATED diary (not live PnL)",
+    )
+    journal.add_argument("--path", type=Path, default=Path("logs/paper_journal.jsonl"))
+    journal.add_argument("--json", action="store_true")
+
+    alerts_cmd = sub.add_parser("alerts", parents=[shared], help="Show recent desk alerts")
+    alerts_cmd.add_argument("--path", type=Path, default=Path("logs/alerts.jsonl"))
+    alerts_cmd.add_argument("--json", action="store_true")
+
+    web = sub.add_parser(
+        "web",
+        parents=[shared],
+        help="Start the local trader UI (no secrets, dry-run)",
+    )
+    web.add_argument("--host", default="127.0.0.1")
+    web.add_argument("--port", type=int, default=8765)
+    web.add_argument("--log-dir", type=Path, default=Path("logs"))
+
     args = parser.parse_args(argv)
     lang = norm_lang(args.lang)
     if args.cmd == "analyze":
@@ -161,6 +185,12 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_policy_check(args, lang)
     if args.cmd == "quote":
         return _cmd_quote(args, lang)
+    if args.cmd == "journal":
+        return _cmd_journal(args, lang)
+    if args.cmd == "alerts":
+        return _cmd_alerts(args, lang)
+    if args.cmd == "web":
+        return _cmd_web(args)
     parser.error(f"unknown command {args.cmd}")
     return 2
 
@@ -253,6 +283,7 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
     if live is not None:
         for note in live.notes:
             print(f"  - {note}")
+    sized = None
     if equity and args.stop:
         sized = size_spot(equity, last, args.stop, args.risk_pct, lang=lang)
         print()
@@ -263,10 +294,23 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
         )
         for note in sized.notes:
             print(f"  - {note}")
+    proof = run_proof(bars, symbol=args.symbol, side=args.side)
+    emit_from_proof(proof, symbol=args.symbol)
     if args.with_proof:
-        proof = run_proof(bars, symbol=args.symbol, side=args.side)
         print()
         _print_proof(proof, lang)
+    why = explain_why(
+        setup=report,
+        proof=proof,
+        size=sized,
+        symbol=args.symbol,
+        lang=lang,
+    )
+    print()
+    print(t(lang, "why_header"))
+    print(why.headline)
+    for sentence in why.sentences:
+        print(f"  - {sentence}")
     print()
     print(t(lang, "no_mcp"))
     return 0
@@ -384,6 +428,9 @@ def _cmd_ticket(args: argparse.Namespace, lang: Lang) -> int:
     )
     action = "blocked" if status == "blocked" else "proposed"
     log_path = append_proposal(ticket, action=action, path=args.log)
+    if status == "blocked":
+        emit_from_policy(policy, ticket_id=ticket.id, symbol=args.symbol)
+        emit_from_proof(proof, ticket_id=ticket.id, symbol=args.symbol)
     if args.json:
         print(ticket.to_json())
     else:
@@ -465,6 +512,8 @@ def _cmd_policy_check(args: argparse.Namespace, lang: Lang) -> int:
         print()
         print(t(lang, "policy_pass") if result.ok else t(lang, "policy_fail"))
         print(f"Withdrawals and transfer-out are always refused. MCP: {MCP_ENDPOINT}")
+    if not result.ok:
+        emit_from_policy(result, symbol=args.symbol)
     return 0 if result.ok else 2
 
 
@@ -492,6 +541,61 @@ def _cmd_quote(args: argparse.Namespace, lang: Lang) -> int:
     print("This helper did not call Binance REST and holds no API keys.")
     for note in live.notes:
         print(f"  - {note}")
+    return 0
+
+
+def _cmd_journal(args: argparse.Namespace, lang: Lang) -> int:
+    summary = journal_summary(args.path)
+    if args.json:
+        print(json.dumps(summary, indent=2))
+        return 0
+    print(t(lang, "paper_header"))
+    print("\u2500" * 48)
+    print(f"{'Label':<16}PAPER / SIMULATED")
+    print(f"{'Running PnL':<16}{_fmt(summary['running_pnl'])}  (not live)")
+    print(f"{'Events':<16}{summary['event_count']}")
+    print(f"{'Open':<16}{summary['open_count']}")
+    if not summary["events"]:
+        print()
+        print("No paper fills yet. Use the web UI or a dry-run OK TKT-…")
+        return 0
+    print()
+    for row in summary["events"][-20:]:
+        pnl = "—" if row.get("pnl") is None else _fmt(row.get("pnl"))
+        print(
+            f"  {row.get('ts')}  {row.get('kind')}  {row.get('ticket_id')}  "
+            f"{row.get('symbol')}  pnl={pnl}  run={_fmt(row.get('running_pnl'))}"
+        )
+    return 0
+
+
+def _cmd_alerts(args: argparse.Namespace, lang: Lang) -> int:
+    rows = read_alerts(args.path)
+    if args.json:
+        print(json.dumps(rows, indent=2))
+        return 0
+    print(t(lang, "alerts_header"))
+    print("\u2500" * 48)
+    if not rows:
+        print("No alerts.")
+        return 0
+    for row in rows[:30]:
+        print(f"  {row.get('ts')}  {row.get('kind')}  {row.get('message')}")
+    return 0
+
+
+def _cmd_web(args: argparse.Namespace) -> int:
+    try:
+        import uvicorn
+        from safe_desk.web.app import create_app
+    except ImportError:
+        print('Install the UI extras: pip install -e ".[dev]"', file=sys.stderr)
+        return 2
+    application = create_app(log_dir=args.log_dir)
+    print(f"Safe Desk UI  |  DRY-RUN  |  http://{args.host}:{args.port}")
+    print(f"MCP (not called by this app): {MCP_ENDPOINT}")
+    print("PAPER / SIMULATED journal — not live PnL. No secrets stored.")
+    uvicorn.run(application, host=args.host, port=args.port, log_level="info")
     return 0
 
 

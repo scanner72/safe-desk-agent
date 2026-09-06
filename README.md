@@ -3,7 +3,9 @@
 **Risk-first trading copilot for [Binance Agent OS](https://www.binance.com/en/agent-os).**  
 Track A — Mini Hackathon (deadline **8 Sep 2026 23:59 UTC**).
 
-Safe Desk turns any MCP-compatible LLM (Claude, ChatGPT, Cursor, Codex) into a desk clerk: read the Agentic subaccount, score a simple setup, run a leakage-safe analog **proof**, apply a desk **policy**, write a ticket, **wait for a human OK**, then optionally place through the **official Binance MCP**.
+Safe Desk is for a **normal exchange user** who does not want the terminal: open a local page, read a plain-language “why enter / wait / skip”, size at **1% risk**, type `OK TKT-…`, and keep a **PAPER** diary. The same gates still sit under the hood (proof, policy, dry-run).
+
+It also still works as a desk clerk inside Claude / ChatGPT / Cursor / Codex: read the Agentic subaccount, score a setup, run a leakage-safe analog **proof**, apply a desk **policy**, write a ticket, **wait for a human OK**, then optionally place through the **official Binance MCP**.
 
 - Venue: Agentic subaccount only
 - No withdrawals, no transfer-out
@@ -12,6 +14,7 @@ Safe Desk turns any MCP-compatible LLM (Claude, ChatGPT, Cursor, Codex) into a d
 - **Proof + policy gates** before `AWAITING_APPROVAL`
 - Max **1%** of Agentic equity per ticket
 - No API secrets in this repo — MCP does market data and trading (no Binance REST keys)
+- **PAPER / SIMULATED** journal is not live PnL
 
 > Not financial advice. Not a live track record. Demo numbers are labeled **SIMULATED**. This project is unofficial and not endorsed by Binance.
 
@@ -22,6 +25,37 @@ https://agent.binance.com/mcp/agentic
 ```
 
 Docs: [MCP server](https://developers.binance.com/en/docs/agent-native/mcp-server) · [Agent OS](https://www.binance.com/en/agent-os)
+
+---
+
+## For a normal trader: open the web UI
+
+No console knowledge required after install. English labels; **EN / RU** toggle on the page.
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+python -m safe_desk.web
+```
+
+Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
+
+| Section | What you see |
+|---|---|
+| **Dashboard** | Dry-run on, MCP URL, emergency stop, last proof / policy |
+| **Analyze** | Sample CSV or pasted MCP JSON → plain-language why ENTER / WAIT / SKIP + 1% size |
+| **Ticket** | Create a ticket; Approve stays disabled until you type `OK TKT-…` |
+| **Paper** | SIMULATED entries / exits and running **PAPER** PnL (not live) |
+| **Alerts** | Proof REJECT, policy BLOCKED, withdraw attempt, daily cap |
+
+Screenshot placeholders (add PNGs under `docs/screenshots/` after you record):
+
+- _Dashboard_ — dry-run badge, MCP URL, last proof/policy  
+- _Analyze_ — four short “why” sentences a non-trader can read  
+- _Ticket_ — big ticket id; bare `ok` rejected  
+- _Paper journal_ — **PAPER / SIMULATED** banner, not a live equity curve  
+
+Same app via `python -m safe_desk web`. Offline path works **without MCP login** (sample CSV). Live numbers: paste MCP price/balance JSON the agent already fetched — this UI never stores secrets and never calls Binance REST.
 
 ---
 
@@ -69,14 +103,15 @@ Details: [prompts/LIVE_VS_OFFLINE.md](prompts/LIVE_VS_OFFLINE.md).
 
 Both paths still do **proof → policy → ticket → wait for `OK TKT-…`**. Dry-run stays the default.
 
-### Offline CLI (works without MCP)
+### Offline CLI (optional — the web UI is enough)
 
-Synthetic daily bars in `examples/btc-ohlcv.csv` — not a live chart.
+Synthetic daily bars in `examples/btc-ohlcv.csv` — not a live chart. Prefer `python -m safe_desk.web` if you do not want the console.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
+python -m safe_desk.web
 python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUSDT
 python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
 python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
@@ -101,13 +136,12 @@ On-screen in the same window:
 
 | Time | Show |
 |---|---|
-| 0:00 | README + MCP URL |
-| 0:08 | `price BTCUSDT` / `balance` (MCP) **or** offline analyze CLI |
-| 0:18 | `analyze BTCUSDT` |
-| 0:28 | proof + policy (CLI or agent card) |
-| 0:40 | `propose` → ticket `AWAITING_APPROVAL` |
-| 0:52 | `ok` rejected, then `OK TKT-…` → `status: simulated` |
-| 1:10 | `withdraw 50 USDT` → refuse |
+| 0:00 | Web UI dashboard (or README + MCP URL) |
+| 0:08 | Analyze sample CSV — plain-language why ENTER/WAIT/SKIP |
+| 0:22 | Ticket + type `ok` (rejected) then `OK TKT-…` |
+| 0:40 | Paper journal labeled **SIMULATED / PAPER** |
+| 0:55 | Alerts: withdraw refused |
+| 1:10 | Optional: CLI / agent chat if you still want the terminal path |
 
 If MCP auth fails, say so and cut to the helper. Do not fake a fill.
 
@@ -127,6 +161,8 @@ Exchange-level (Binance) and desk-level (this repo) — both required. Details: 
 | Withdraw / send-out / main sweep | Always refuse |
 | Live switch | `ENABLE LIVE` then `I ACCEPT LIVE RISK` |
 | Log | every proposal → `logs/proposals.jsonl` |
+| Paper journal | dry-run OK → `logs/paper_journal.jsonl` (**PAPER / SIMULATED**) |
+| Alerts | `logs/alerts.jsonl` (proof REJECT, policy BLOCKED, withdraw, daily cap) |
 | Secrets | none |
 
 The Agentic box can still go to **zero** from losing trades. A locked withdrawal door is not a max-loss formula. Fund only what you can lose.
@@ -154,10 +190,13 @@ Natural language is fine. Canonical forms:
 
 ## Python helper (optional, no secrets)
 
+The **web UI is the default**. CLI is the fallback for agents and CI.
+
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
+python -m safe_desk.web
 python -m safe_desk size --equity 1000 --entry 102450 --stop 100200
 python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
 python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
@@ -166,7 +205,7 @@ python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
   --proof-csv examples/btc-ohlcv.csv
 ```
 
-Stdlib only at runtime. MCP still does the trading.
+Core math is stdlib. The local UI adds FastAPI (installed with `.[dev]`). MCP still does any live trading — and only after `OK TKT-…`.
 
 ---
 
@@ -179,8 +218,11 @@ prompts/LIVE_VS_OFFLINE.md      MCP live path vs CSV offline path
 prompts/COMMANDS.md             intents
 prompts/TICKET.md               ticket template
 skills/safe-desk-agent/         portable skill
-src/safe_desk/                  SMA, ATR, 1% sizing, proof, policy, tickets
+src/safe_desk/                  SMA, ATR, 1% sizing, proof, policy, why-entry, tickets
+src/safe_desk/web/              local FastAPI UI (no login, no secrets)
 config/policy.example.yaml      desk policy (no secrets)
+logs/paper_journal.jsonl        PAPER diary (gitignored, created at runtime)
+logs/alerts.jsonl               desk alerts (gitignored)
 docs/architecture.md
 docs/submission.md              how to enter
 docs/submission-checklist.md    day-of boxes (follow / repost / reply / survey)

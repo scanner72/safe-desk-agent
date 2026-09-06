@@ -39,6 +39,12 @@ Reasons
   - LOW volatility (ATR 0.69% of price).
   - Signal BUY is a setup label, not an order.
 
+Why (plain language)
+Why ENTER (setup only — not an order)
+  - Price sits above both the short and long average lines, so recent days have been drifting up.
+  - Similar past windows leaned the same way. That is a check, not a promise — still not an order.
+  - Add a stop and wallet size to see a 1% risk suggestion.
+
 No MCP call was made. Paste this into the agent, then wait for a human OK.
 ```
 

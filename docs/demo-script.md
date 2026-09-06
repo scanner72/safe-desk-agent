@@ -25,6 +25,14 @@ python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
 
 4. Dry-run stays on. Do not enable live on camera unless you intend a tiny real order.
 
+**Optional (preferred for a normal trader):** start the local UI instead of the terminal.
+
+```bash
+python -m safe_desk.web
+```
+
+Open `http://127.0.0.1:8765`. Walk Dashboard → Analyze (sample CSV) → Ticket (`ok` fails, `OK TKT-…` writes a **PAPER** fill) → Paper journal → Alerts (withdraw refused). Say out loud that the journal is **SIMULATED / PAPER**, not live PnL. Transcript: [demo/09-web-ui.md](../demo/09-web-ui.md).
+
 ## Voice-over (copy this, ~60–75 seconds)
 
 Safe Desk is a Track A agent for Binance Agent OS. It turns Claude or Cursor into a risk-first copilot on the official MCP.
@@ -43,13 +51,12 @@ If I ask to withdraw, it refuses. That is the product: a copilot that can see th
 
 | Time | Type / show |
 |---|---|
-| 0:00 | README + MCP URL |
-| 0:08 | `price BTCUSDT` / `balance` (MCP) or helper analyze |
-| 0:18 | `analyze BTCUSDT` |
-| 0:28 | proof + policy cards (or the two CLI commands) |
-| 0:40 | `propose 1% risk` → ticket `AWAITING_APPROVAL` |
-| 0:52 | `ok` (rejected) then `OK TKT-20260905-160000` (simulated) |
-| 1:10 | `withdraw 50 USDT to my wallet` → refuse |
+| 0:00 | Web UI dashboard **or** README + MCP URL |
+| 0:08 | Analyze sample — plain-language why ENTER/WAIT/SKIP |
+| 0:22 | Create ticket; type `ok` (rejected) then `OK TKT-…` |
+| 0:40 | Paper journal: **SIMULATED / PAPER** running PnL |
+| 0:55 | Alerts: withdraw refused |
+| 1:10 | Optional CLI / agent chat |
 | 1:25 | Disclaimer: SIMULATED, not live PnL |
 
 ## If MCP auth fails

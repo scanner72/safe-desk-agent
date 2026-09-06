@@ -16,7 +16,7 @@ Docs: https://developers.binance.com/en/docs/agent-native/mcp-server
 read / price / analyze  →  proof  →  policy  →  ticket TKT-…  →  WAIT  →  OK TKT-…
 ```
 
-1. **Analyze** — live path: MCP at `https://agent.binance.com/mcp/agentic` (price / balance / klines), then pass JSON or numbers into `safe_desk`. Offline path: `python -m safe_desk analyze` on a CSV. See [prompts/LIVE_VS_OFFLINE.md](../../prompts/LIVE_VS_OFFLINE.md).
+1. **Analyze** — live path: MCP at `https://agent.binance.com/mcp/agentic` (price / balance / klines), then pass JSON or numbers into `safe_desk`. Offline path: local web UI `python -m safe_desk.web` or `python -m safe_desk analyze` on a CSV. See [prompts/LIVE_VS_OFFLINE.md](../../prompts/LIVE_VS_OFFLINE.md). Explain why in plain language (ENTER / WAIT / SKIP) — still not an order.
 2. **Proof** — `python -m safe_desk proof`. APPROVE / WAIT / REJECT. `WAIT` blocks live; dry-run may draft with WARNING. `--require-proof` blocks REJECT.
 3. **Policy** — `python -m safe_desk policy check` (allowlist, notional, 1% risk, daily caps, emergency stop). Fail → `BLOCKED`, no `AWAITING_APPROVAL`.
 4. **Ticket** — size, SL, TP, risk ≤ 1% of **Agentic** equity. Status `awaiting_approval` only if gates pass.
@@ -32,7 +32,7 @@ read / price / analyze  →  proof  →  policy  →  ticket TKT-…  →  WAIT 
 - SPOT default. Futures/margin only after an explicit ask and a liquidation warning.
 - Discover real MCP tool names. Do not invent endpoints. No API keys.
 - Log every proposal to `logs/proposals.jsonl` or a one-line JSON in chat.
-- No fake live PnL. No Polymarket. Binance Agent OS only.
+- No fake live PnL. Paper journal is **PAPER / SIMULATED**. No Polymarket. Binance Agent OS only.
 
 ## Approval
 
