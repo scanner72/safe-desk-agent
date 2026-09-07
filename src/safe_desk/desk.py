@@ -15,7 +15,7 @@ from typing import Any, Literal
 from safe_desk.alerts import emit_alert, emit_from_policy, emit_from_proof, read_alerts
 from safe_desk.approval import is_bare_approval, parse_cancel_phrase, parse_ok_phrase
 from safe_desk.i18n import Lang, norm_lang
-from safe_desk.indicators import atr, realized_vol, sma_last
+from safe_desk.indicators import atr, realized_vol, rsi_last, sma_last, volume_ratio
 from safe_desk.journal import (
     append_paper_entry,
     append_paper_exit,
@@ -207,6 +207,7 @@ class Desk:
         if equity is None and live is not None:
             equity = live.equity
 
+        volumes = [b.volume for b in loaded]
         fast = sma_last(closes, 20)
         slow = sma_last(closes, 50)
         atr_value = atr(highs, lows, closes, 14)
@@ -219,6 +220,8 @@ class Desk:
             realized_vol_value=vol,
             side=side,
             stop=stop,
+            rsi_value=rsi_last(closes, 14),
+            volume_ratio=volume_ratio(volumes, 20),
             lang=language,
         )
 
@@ -744,6 +747,10 @@ def _setup_dict(setup: SetupReport) -> dict[str, Any]:
         "risk_score": setup.risk_score,
         "signal": setup.signal,
         "reasons": list(setup.reasons),
+        "rsi": setup.rsi,
+        "rsi_state": setup.rsi_state,
+        "volume_ratio": setup.volume_ratio,
+        "volume_flag": setup.volume_flag,
     }
 
 
@@ -785,6 +792,10 @@ def _setup_from_analysis(analysis: dict[str, Any]) -> SetupReport:
         risk_score=int(raw["risk_score"]),
         signal=raw["signal"],
         reasons=tuple(raw.get("reasons") or ()),
+        rsi=raw.get("rsi"),
+        rsi_state=str(raw.get("rsi_state") or "UNKNOWN"),
+        volume_ratio=raw.get("volume_ratio"),
+        volume_flag=str(raw.get("volume_flag") or "UNKNOWN"),
     )
 
 

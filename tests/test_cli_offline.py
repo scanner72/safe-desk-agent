@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from safe_desk.cli import main
-from safe_desk.indicators import atr, sma_last
+from safe_desk.indicators import atr, rsi_last, sma_last, volume_ratio
 from safe_desk.ohlcv import load_ohlcv
 from safe_desk.position_sizing import size_spot
 from safe_desk.risk import evaluate_setup
@@ -24,8 +24,12 @@ def test_sample_csv_analyze_matches_demo(capsys):
     assert "(0.69%)" in out
     assert "BULL" in out
     assert "LOW" in out
-    assert "20 / 100" in out
+    assert "26 / 100" in out
     assert "BUY  (setup only — not an order)" in out
+    assert "RSI(14)" in out
+    assert "OVERBOUGHT" in out
+    assert "1.08× avg" in out
+    assert "overbought" in out.lower()
     assert "Why (plain language)" in out
     assert "Why ENTER" in out
     assert "No MCP call was made" in out
@@ -108,9 +112,14 @@ def test_sample_csv_locked_math():
     fast = sma_last(closes, 20)
     slow = sma_last(closes, 50)
     atr_value = atr(highs, lows, closes, 14)
+    volumes = [b.volume for b in bars]
+    rsi_value = rsi_last(closes, 14)
+    vol_ratio = volume_ratio(volumes, 20)
     assert fast is not None and slow is not None and atr_value is not None
     assert round(fast, 2) == 101_528.94
     assert round(slow, 2) == 99_890.87
+    assert rsi_value is not None and rsi_value >= 70
+    assert vol_ratio is not None and 0.5 < vol_ratio < 2.0
     report = evaluate_setup(
         last=last,
         sma_fast=fast,
@@ -118,11 +127,15 @@ def test_sample_csv_locked_math():
         atr_value=atr_value,
         realized_vol_value=None,
         side="BUY",
+        rsi_value=rsi_value,
+        volume_ratio=vol_ratio,
     )
     assert report.trend == "BULL"
     assert report.vol_regime == "LOW"
     assert report.signal == "BUY"
-    assert report.risk_score == 20
+    assert report.rsi_state == "OVERBOUGHT"
+    assert report.volume_flag == "NORMAL"
+    assert report.risk_score == 26
 
     sized = size_spot(1_000, 102_450, 100_200, 1.0)
     assert sized.quantity == 10.0 / 2_250.0

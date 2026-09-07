@@ -57,7 +57,7 @@ Never invent a live fill or a live equity curve on either path.
 |---|---|
 | `balance` / `account` | Read Agentic balances, open orders, positions via MCP Account tools. Summarize. No order. If MCP is down, say so and offer the offline helper. |
 | `price SYMBOL` | Public ticker / book / last via MCP market data. Optional: format with `python -m safe_desk quote --price-json …`. |
-| `signal` / `analyze SYMBOL` | Pull klines if available; otherwise ask for a CSV and/or run `python -m safe_desk analyze`. Apply SMA20/SMA50 trend, ATR volatility, risk score. Emit a setup card. **Not an order.** |
+| `signal` / `analyze SYMBOL` | Pull klines if available; otherwise ask for a CSV and/or run `python -m safe_desk analyze`. Apply SMA20/SMA50 trend, ATR volatility, RSI(14), a simple volume cue, risk score. Emit a setup card. **Not an order.** |
 | `proof SYMBOL` | Run `python -m safe_desk proof` on OHLCV. APPROVE / WAIT / REJECT is a gate, not an order. |
 | `policy` / `policy check` | Run `python -m safe_desk policy check`. Failed policy → no `AWAITING_APPROVAL` ticket. Withdrawals always fail. |
 | `propose` / `ticket` / `trade idea` | Proof (if bars exist) → policy → ticket. Status `awaiting_approval` only if policy passes and proof does not block. Stop. |
@@ -82,6 +82,8 @@ When you analyze `SYMBOL`:
 5. Vol regime: ATR% `< 1.5` LOW, `< 3.5` NORMAL, else HIGH.
 6. Risk score 0–100 (higher = more dangerous). Prefer the local helper (`safe_desk.risk.evaluate_setup`) so the number is reproducible.
 7. Signal: `BUY` / `HOLD` / `AVOID`. Spot default: `SELL` means "do not buy / reduce", not "open a short", unless the user explicitly asked for a short and accepted futures/margin risk.
+8. RSI(14): overbought ≥ 70, oversold ≤ 30. Context for the why-block and a small risk-score nudge — not a trade trigger.
+9. Volume vs the recent 20-bar average: SPIKE (≥2×) or QUIET (≤0.5×). Same — explanation only. Do not spam extra signals.
 
 A `BUY` signal is a **setup label**, never an order.
 

@@ -92,33 +92,40 @@ def explain_why(
     policy_ok, policy_reason = _policy_view(policy)
     action = decide_action(signal=signal, proof_verdict=proof_verdict, policy_ok=policy_ok)
 
-    sentences: list[str] = []
+    head: list[str] = []
     if setup is not None:
-        sentences.append(_trend_sentence(setup.trend, language))
-        if setup.vol_regime in {"HIGH", "UNKNOWN"} or action == "SKIP":
-            sentences.append(_vol_sentence(setup.vol_regime, language))
-    sentences.append(_action_sentence(action, proof_verdict, language))
+        head.append(_trend_sentence(setup.trend, language))
+    texture = _rsi_volume_sentence(setup, language) if setup is not None else None
+    atr_line = None
+    if setup is not None and (setup.vol_regime in {"HIGH", "UNKNOWN"} or action == "SKIP"):
+        atr_line = _vol_sentence(setup.vol_regime, language)
+    action_line = _action_sentence(action, proof_verdict, language)
 
     if policy_ok is False:
-        sentences.append(t(language, "why_policy_fail", reason=policy_reason or "blocked"))
+        tail = t(language, "why_policy_fail", reason=policy_reason or "blocked")
     elif size is not None:
-        sentences.append(
-            t(
-                language,
-                "why_size",
-                risk=size.risk_pct,
-                equity=_money(size.equity),
-                qty=_qty(size.quantity),
-                asset=base_asset(symbol),
-                worth=_money(size.notional),
-            )
+        tail = t(
+            language,
+            "why_size",
+            risk=size.risk_pct,
+            equity=_money(size.equity),
+            qty=_qty(size.quantity),
+            asset=base_asset(symbol),
+            worth=_money(size.notional),
         )
     elif action != "SKIP":
-        sentences.append(t(language, "why_size_none"))
+        tail = t(language, "why_size_none")
+    else:
+        tail = None
 
-    # Keep 2–4 sentences. Drop the optional vol line if we overflow.
+    extras = [line for line in (texture, atr_line) if line]
+    sentences = [*head, *extras, action_line, *([tail] if tail else [])]
+    # Keep 2–4 sentences. Prefer RSI/volume context over the ATR swing line.
     if len(sentences) > 4:
-        sentences = [sentences[0], sentences[2], sentences[3]]
+        extras = [line for line in (texture,) if line]
+        sentences = [*head, *extras, action_line, *([tail] if tail else [])]
+    if len(sentences) > 4:
+        sentences = sentences[:4]
     if len(sentences) < 2:
         sentences.append(t(language, "why_not_order"))
 
@@ -161,6 +168,29 @@ def _policy_view(policy: PolicyResult | dict[str, Any] | None) -> tuple[bool | N
     if policy.violations:
         reason = policy.violations[0].message
     return policy.ok, reason
+
+
+def _rsi_volume_sentence(setup: SetupReport, lang: Lang) -> str | None:
+    """One plain sentence when RSI is stretched or volume is loud/quiet."""
+    rsi = setup.rsi_state
+    vol = setup.volume_flag
+    key = {
+        ("OVERBOUGHT", "SPIKE"): "why_rsi_overbought_spike",
+        ("OVERBOUGHT", "QUIET"): "why_rsi_overbought_quiet",
+        ("OVERSOLD", "SPIKE"): "why_rsi_oversold_spike",
+        ("OVERSOLD", "QUIET"): "why_rsi_oversold_quiet",
+    }.get((rsi, vol))
+    if key is None and rsi == "OVERBOUGHT":
+        key = "why_rsi_overbought"
+    elif key is None and rsi == "OVERSOLD":
+        key = "why_rsi_oversold"
+    elif key is None and vol == "SPIKE":
+        key = "why_volume_spike"
+    elif key is None and vol == "QUIET":
+        key = "why_volume_quiet"
+    if key is None:
+        return None
+    return t(lang, key)
 
 
 def _trend_sentence(trend: str, lang: Lang) -> str:

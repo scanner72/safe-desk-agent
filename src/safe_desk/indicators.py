@@ -97,3 +97,87 @@ def trend_state(
     if last < sma_fast < sma_slow:
         return "BEAR"
     return "MIXED"
+
+
+def _rsi_from_avgs(avg_gain: float, avg_loss: float) -> float:
+    if avg_loss <= 0 and avg_gain <= 0:
+        return 50.0
+    if avg_loss <= 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return 100.0 - (100.0 / (1.0 + rs))
+
+
+def rsi(closes: Sequence[Number], period: int = 14) -> list[float | None]:
+    """Wilder RSI. Leading values are None until `period` changes exist."""
+    if period < 1:
+        raise ValueError("period must be >= 1")
+    xs = _as_floats(closes)
+    out: list[float | None] = [None] * len(xs)
+    if len(xs) < period + 1:
+        return out
+    gains: list[float] = []
+    losses: list[float] = []
+    for prev, cur in zip(xs, xs[1:]):
+        delta = cur - prev
+        gains.append(max(delta, 0.0))
+        losses.append(max(-delta, 0.0))
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    out[period] = _rsi_from_avgs(avg_gain, avg_loss)
+    for i in range(period, len(gains)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+        out[i + 1] = _rsi_from_avgs(avg_gain, avg_loss)
+    return out
+
+
+def rsi_last(closes: Sequence[Number], period: int = 14) -> float | None:
+    series = rsi(closes, period)
+    return series[-1] if series else None
+
+
+def rsi_state(
+    value: float | None,
+    *,
+    overbought: float = 70.0,
+    oversold: float = 30.0,
+) -> str:
+    """OVERBOUGHT, OVERSOLD, NEUTRAL, or UNKNOWN."""
+    if value is None:
+        return "UNKNOWN"
+    if value >= overbought:
+        return "OVERBOUGHT"
+    if value <= oversold:
+        return "OVERSOLD"
+    return "NEUTRAL"
+
+
+def volume_ratio(volumes: Sequence[Number], lookback: int = 20) -> float | None:
+    """Last bar volume divided by the average of the prior `lookback` bars."""
+    if lookback < 1:
+        raise ValueError("lookback must be >= 1")
+    xs = _as_floats(volumes)
+    if len(xs) < lookback + 1:
+        return None
+    prior = xs[-(lookback + 1) : -1]
+    avg = sum(prior) / lookback
+    if avg <= 0:
+        return None
+    return xs[-1] / avg
+
+
+def volume_flag(
+    ratio: float | None,
+    *,
+    spike: float = 2.0,
+    quiet: float = 0.5,
+) -> str:
+    """SPIKE, QUIET, NORMAL, or UNKNOWN. Context only — not a trade trigger."""
+    if ratio is None:
+        return "UNKNOWN"
+    if ratio >= spike:
+        return "SPIKE"
+    if ratio <= quiet:
+        return "QUIET"
+    return "NORMAL"

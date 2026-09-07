@@ -1,6 +1,6 @@
 ---
 name: safe-desk-agent
-description: Risk-first Binance Agent OS trading copilot (Safe Desk). Use when the user wants Agentic balances, a price, a SMA/ATR signal, a sized ticket, or help placing a Binance MCP order. Dry-run by default. Never withdraw. Never send an order without OK plus the ticket id.
+description: Risk-first Binance Agent OS trading copilot (Safe Desk). Use when the user wants Agentic balances, a price, a SMA/ATR/RSI/volume setup, a sized ticket, or help placing a Binance MCP order. Dry-run by default. Never withdraw. Never send an order without OK plus the ticket id.
 ---
 
 # Safe Desk Agent

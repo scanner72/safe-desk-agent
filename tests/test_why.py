@@ -6,7 +6,17 @@ from safe_desk.risk import SetupReport
 from safe_desk.why import decide_action, explain_why
 
 
-def _setup(*, trend="BULL", regime="LOW", score=20, signal="BUY") -> SetupReport:
+def _setup(
+    *,
+    trend="BULL",
+    regime="LOW",
+    score=20,
+    signal="BUY",
+    rsi=None,
+    rsi_state="UNKNOWN",
+    volume_ratio=None,
+    volume_flag="UNKNOWN",
+) -> SetupReport:
     return SetupReport(
         last=102450,
         sma_fast=101528,
@@ -19,6 +29,10 @@ def _setup(*, trend="BULL", regime="LOW", score=20, signal="BUY") -> SetupReport
         risk_score=score,
         signal=signal,
         reasons=("aligned",),
+        rsi=rsi,
+        rsi_state=rsi_state,
+        volume_ratio=volume_ratio,
+        volume_flag=volume_flag,
     )
 
 
@@ -110,3 +124,51 @@ def test_high_vol_adds_swing_sentence():
     why = explain_why(setup=_setup(regime="HIGH", score=80, signal="AVOID"))
     assert why.action == "SKIP"
     assert any("swings" in s.lower() for s in why.sentences)
+
+
+def test_why_mentions_overbought_and_volume_spike():
+    why = explain_why(
+        setup=_setup(
+            rsi=78.0,
+            rsi_state="OVERBOUGHT",
+            volume_ratio=2.4,
+            volume_flag="SPIKE",
+        )
+    )
+    blob = " ".join(why.sentences).lower()
+    assert "overbought" in blob
+    assert "volume" in blob and "louder" in blob
+    assert 2 <= len(why.sentences) <= 4
+    assert "sma20" not in blob and "sma50" not in blob
+    assert "atr(" not in blob and "atr " not in blob
+
+
+def test_why_mentions_oversold_and_quiet_volume_ru():
+    why = explain_why(
+        setup=_setup(
+            trend="BEAR",
+            regime="NORMAL",
+            score=50,
+            signal="HOLD",
+            rsi=22.0,
+            rsi_state="OVERSOLD",
+            volume_ratio=0.4,
+            volume_flag="QUIET",
+        ),
+        lang="ru",
+    )
+    blob = " ".join(why.sentences)
+    assert "перепродан" in blob
+    assert "тише" in blob
+    assert why.action == "WAIT"
+
+
+def test_why_skips_rsi_volume_when_neutral():
+    why = explain_why(
+        setup=_setup(rsi=52.0, rsi_state="NEUTRAL", volume_ratio=1.05, volume_flag="NORMAL")
+    )
+    blob = " ".join(why.sentences).lower()
+    assert "overbought" not in blob
+    assert "oversold" not in blob
+    assert "spike" not in blob
+    assert "quieter" not in blob
