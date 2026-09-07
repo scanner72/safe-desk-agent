@@ -29,19 +29,23 @@ SMA20         101,528.94
 SMA50         99,890.87
 ATR(14)       702.1791  (0.69%)
 Realized vol  1.8% ann.
+RSI(14)       86.8  (OVERBOUGHT)
+Volume        1.08× avg  (NORMAL)
 Trend         BULL
 Vol regime    LOW
-Risk score    20 / 100
+Risk score    26 / 100
 Signal        BUY  (setup only — not an order)
 
 Reasons
   - Trend BULL is aligned with BUY.
   - LOW volatility (ATR 0.69% of price).
+  - RSI 86.8 is overbought — stretched, not a reason to chase.
   - Signal BUY is a setup label, not an order.
 
 Why (plain language)
 Why ENTER (setup only — not an order)
   - Price sits above both the short and long average lines, so recent days have been drifting up.
+  - Buying looks stretched after a strong run (overbought) — that is a caution, not a reason to chase.
   - Similar past windows leaned the same way. That is a check, not a promise — still not an order.
   - Add a stop and wallet size to see a 1% risk suggestion.
 

@@ -15,7 +15,7 @@ from pathlib import Path
 
 from safe_desk.alerts import emit_from_policy, emit_from_proof, read_alerts
 from safe_desk.i18n import Lang, norm_lang, t
-from safe_desk.indicators import atr, realized_vol, sma_last
+from safe_desk.indicators import atr, realized_vol, rsi_last, sma_last, volume_ratio
 from safe_desk.journal import summarize as journal_summary
 from safe_desk.log import append_proposal
 from safe_desk.mcp_input import MCP_ENDPOINT, LiveQuote, load_live_quote
@@ -244,10 +244,13 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
     if equity is None and live is not None:
         equity = live.equity
 
+    volumes = [b.volume for b in bars]
     fast = sma_last(closes, args.fast)
     slow = sma_last(closes, args.slow)
     atr_value = atr(highs, lows, closes, args.atr_period)
     vol = realized_vol(closes, period=min(20, max(2, len(closes) - 1)))
+    rsi_value = rsi_last(closes, 14)
+    vol_ratio = volume_ratio(volumes, 20)
     report = evaluate_setup(
         last=last,
         sma_fast=fast,
@@ -256,6 +259,8 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
         realized_vol_value=vol,
         side=args.side,
         stop=args.stop,
+        rsi_value=rsi_value,
+        volume_ratio=vol_ratio,
         lang=lang,
     )
     print(t(lang, "analyze_header", symbol=args.symbol.upper()))
@@ -272,6 +277,13 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
     print(f"{'ATR(' + str(args.atr_period) + ')':<14}{atr_txt}")
     rvol = "\u2014" if report.realized_vol is None else f"{100 * report.realized_vol:.1f}% {t(lang, 'ann')}"
     print(f"{t(lang, 'realized_vol'):<14}{rvol}")
+    rsi_txt = "\u2014" if report.rsi is None else f"{report.rsi:.1f}  ({report.rsi_state})"
+    print(f"{t(lang, 'rsi') + '(14)':<14}{rsi_txt}")
+    if report.volume_ratio is None:
+        vol_txt = "\u2014"
+    else:
+        vol_txt = f"{report.volume_ratio:.2f}\u00d7 avg  ({report.volume_flag})"
+    print(f"{t(lang, 'volume'):<14}{vol_txt}")
     print(f"{t(lang, 'trend'):<14}{report.trend}")
     print(f"{t(lang, 'vol_regime'):<14}{report.vol_regime}")
     print(f"{t(lang, 'risk_score'):<14}{report.risk_score} / 100")

@@ -6,11 +6,13 @@ from dataclasses import dataclass
 from typing import Literal
 
 from safe_desk.i18n import Lang, t
-from safe_desk.indicators import atr_pct, trend_state
+from safe_desk.indicators import atr_pct, rsi_state, trend_state, volume_flag
 
 Side = Literal["BUY", "SELL"]
 Signal = Literal["BUY", "HOLD", "AVOID"]
 VolRegime = Literal["LOW", "NORMAL", "HIGH", "UNKNOWN"]
+RsiState = Literal["OVERBOUGHT", "OVERSOLD", "NEUTRAL", "UNKNOWN"]
+VolumeFlag = Literal["SPIKE", "QUIET", "NORMAL", "UNKNOWN"]
 
 
 @dataclass(frozen=True)
@@ -26,6 +28,10 @@ class SetupReport:
     risk_score: int
     signal: Signal
     reasons: tuple[str, ...]
+    rsi: float | None = None
+    rsi_state: RsiState = "UNKNOWN"
+    volume_ratio: float | None = None
+    volume_flag: VolumeFlag = "UNKNOWN"
 
 
 def vol_regime(atr_percent: float | None) -> VolRegime:
@@ -45,9 +51,15 @@ def risk_score(
     atr_percent: float | None,
     stop_distance: float | None,
     atr_value: float | None,
+    rsi_value: float | None = None,
+    volume_ratio: float | None = None,
     lang: Lang = "en",
 ) -> tuple[int, list[str]]:
-    """0–100 danger / quality score. 100 = do not touch."""
+    """0–100 danger / quality score. 100 = do not touch.
+
+    RSI and volume are context: they can nudge the score and reasons, but
+    they do not create a BUY and do not flip SMA/ATR trend or vol regime.
+    """
     score = 30
     reasons: list[str] = []
 
@@ -76,6 +88,22 @@ def risk_score(
     else:
         score += 10
         reasons.append(t(lang, "vol_unknown"))
+
+    rstate = rsi_state(rsi_value)
+    if rstate == "OVERBOUGHT":
+        score += 6
+        reasons.append(t(lang, "rsi_overbought", rsi=rsi_value))
+    elif rstate == "OVERSOLD":
+        score += 4
+        reasons.append(t(lang, "rsi_oversold", rsi=rsi_value))
+
+    vflag = volume_flag(volume_ratio)
+    if vflag == "SPIKE":
+        score += 5
+        reasons.append(t(lang, "volume_spike", ratio=volume_ratio))
+    elif vflag == "QUIET":
+        score += 3
+        reasons.append(t(lang, "volume_quiet", ratio=volume_ratio))
 
     if (
         stop_distance is not None
@@ -114,20 +142,27 @@ def evaluate_setup(
     realized_vol_value: float | None,
     side: Side = "BUY",
     stop: float | None = None,
+    rsi_value: float | None = None,
+    volume_ratio: float | None = None,
     lang: Lang = "en",
 ) -> SetupReport:
     trend = trend_state(last, sma_fast, sma_slow)
     pct = atr_pct(atr_value, last)
     regime = vol_regime(pct)
     stop_distance = abs(last - stop) if stop is not None else None
+    rstate: RsiState = rsi_state(rsi_value)  # type: ignore[assignment]
+    vflag: VolumeFlag = volume_flag(volume_ratio)  # type: ignore[assignment]
     score, reasons = risk_score(
         trend=trend,
         side=side,
         atr_percent=pct,
         stop_distance=stop_distance,
         atr_value=atr_value,
+        rsi_value=rsi_value,
+        volume_ratio=volume_ratio,
         lang=lang,
     )
+    # Signal stays SMA/ATR/score based. RSI and volume do not force BUY/SELL.
     signal = decide_signal(trend, regime, score, side)
     if signal == "BUY":
         reasons.append(t(lang, "sig_buy"))
@@ -147,4 +182,8 @@ def evaluate_setup(
         risk_score=score,
         signal=signal,
         reasons=tuple(reasons),
+        rsi=rsi_value,
+        rsi_state=rstate,
+        volume_ratio=volume_ratio,
+        volume_flag=vflag,
     )

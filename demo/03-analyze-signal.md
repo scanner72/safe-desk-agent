@@ -10,7 +10,7 @@ analyze BTCUSDT
 
 ## Agent
 
-Pulling daily closes for SMA20 / SMA50 and ATR(14). If MCP klines are missing I use the local helper — same rules.
+Pulling daily closes for SMA20 / SMA50, ATR(14), RSI(14), and a simple volume cue. If MCP klines are missing I use the local helper — same rules.
 
 ```
 mcp.call  market.klines
@@ -28,9 +28,11 @@ SMA20         101,528.94
 SMA50         99,890.87
 ATR(14)       702.1791  (0.69%)
 Realized vol  1.8% ann.
+RSI(14)       86.8  (OVERBOUGHT)
+Volume        1.08× avg  (NORMAL)
 Trend         BULL
 Vol regime    LOW
-Risk score    20 / 100
+Risk score    26 / 100
 Signal        BUY  (setup only — not an order)
 ```
 
@@ -38,7 +40,10 @@ Reasons (from `python -m safe_desk analyze examples/btc-ohlcv.csv --symbol BTCUS
 
 - Trend BULL is aligned with BUY.
 - LOW volatility (ATR 0.69% of price).
+- RSI 86.8 is overbought — stretched, not a reason to chase.
 - Signal BUY is a setup label, not an order.
+
+Why (plain language) now mentions the overbought stretch as **context**, not a chase or a forced skip. Volume is in line with the recent average, so it stays quiet.
 
 Live path (when MCP is connected): I would have called the official market tool at `https://agent.binance.com/mcp/agentic`, then passed last / equity into `python -m safe_desk` via `--price-json` / `--balance-json`. This helper does not call Binance REST and holds no API keys.
 

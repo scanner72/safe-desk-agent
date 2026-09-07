@@ -43,7 +43,7 @@ Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 | Section | What you see |
 |---|---|
 | **Dashboard** | Dry-run on, MCP URL, emergency stop, last proof / policy, **demo presets** |
-| **Analyze** | Sample CSV or pasted MCP JSON → plain-language why ENTER / WAIT / SKIP + 1% size |
+| **Analyze** | Sample CSV or pasted MCP JSON → why ENTER / WAIT / SKIP (SMA/ATR plus RSI + volume context) + 1% size |
 | **Ticket** | Create a ticket; Approve stays disabled until you type `OK TKT-…` |
 | **Paper** | SIMULATED entries / exits and running **PAPER** PnL (not live) |
 | **Alerts** | Proof REJECT, policy BLOCKED, withdraw attempt, daily cap |
@@ -149,7 +149,7 @@ python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
   --proof-csv examples/btc-ohlcv.csv
 ```
 
-`analyze` should print **DRY-RUN**, last **102,450.00**, trend **BULL**, vol **LOW**, risk **20 / 100**, signal **BUY** (setup only). Full expected printout: [demo/07-cli-offline.md](demo/07-cli-offline.md). Use `python3` if `python` is missing.
+`analyze` should print **DRY-RUN**, last **102,450.00**, trend **BULL**, vol **LOW**, RSI **overbought** on the sample grind (context only), volume **in line** with the recent average, risk **26 / 100**, signal **BUY** (setup only). The why-block now includes RSI + volume context when stretched, quiet, or spiking — it does not place or force a trade. Full expected printout: [demo/07-cli-offline.md](demo/07-cli-offline.md). Use `python3` if `python` is missing.
 
 `examples/mcp-*.json` are **SIMULATED** MCP-shaped payloads for rehearsal (same numbers as the CSV). In a live session, replace them with a real MCP tool result.
 
@@ -245,7 +245,7 @@ prompts/LIVE_VS_OFFLINE.md      MCP live path vs CSV offline path
 prompts/COMMANDS.md             intents
 prompts/TICKET.md               ticket template
 skills/safe-desk-agent/         portable skill
-src/safe_desk/                  SMA, ATR, 1% sizing, proof, policy, why-entry, tickets
+src/safe_desk/                  SMA, ATR, RSI, volume cue, 1% sizing, proof, policy, why-entry, tickets
 src/safe_desk/web/              local FastAPI UI (no login, no secrets)
 config/policy.example.yaml      desk policy (no secrets)
 logs/paper_journal.jsonl        PAPER diary (gitignored, created at runtime)

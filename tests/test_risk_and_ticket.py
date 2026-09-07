@@ -23,6 +23,47 @@ def test_bull_aligned_buy_can_signal_buy():
     assert report.risk_score < 70
 
 
+def test_rsi_and_volume_nudge_score_but_do_not_force_buy():
+    base = evaluate_setup(
+        last=110,
+        sma_fast=105,
+        sma_slow=100,
+        atr_value=2.0,
+        realized_vol_value=0.4,
+        side="BUY",
+        stop=107,
+    )
+    stretched = evaluate_setup(
+        last=110,
+        sma_fast=105,
+        sma_slow=100,
+        atr_value=2.0,
+        realized_vol_value=0.4,
+        side="BUY",
+        stop=107,
+        rsi_value=78.0,
+        volume_ratio=2.5,
+    )
+    assert base.signal in {"BUY", "HOLD"}
+    assert stretched.rsi_state == "OVERBOUGHT"
+    assert stretched.volume_flag == "SPIKE"
+    assert stretched.risk_score > base.risk_score
+    assert stretched.signal != "AVOID" or stretched.risk_score >= 70
+    mixed = evaluate_setup(
+        last=102,
+        sma_fast=100,
+        sma_slow=105,
+        atr_value=2.0,
+        realized_vol_value=0.4,
+        side="BUY",
+        rsi_value=22.0,
+        volume_ratio=0.3,
+    )
+    assert mixed.trend == "MIXED"
+    assert mixed.rsi_state == "OVERSOLD"
+    assert mixed.signal != "BUY"
+
+
 def test_high_vol_is_avoid():
     report = evaluate_setup(
         last=100,

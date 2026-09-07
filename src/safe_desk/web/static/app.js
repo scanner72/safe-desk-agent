@@ -173,6 +173,8 @@ async function runAnalyze(useSample) {
         <div class="stat"><span class="k">Last</span><span class="v">${money(data.last)}</span></div>
         <div class="stat"><span class="k">Trend</span><span class="v">${s.trend}</span></div>
         <div class="stat"><span class="k">Swings</span><span class="v">${s.vol_regime}</span></div>
+        <div class="stat"><span class="k">RSI</span><span class="v">${s.rsi == null ? "—" : `${Number(s.rsi).toFixed(1)} ${s.rsi_state || ""}`}</span></div>
+        <div class="stat"><span class="k">Volume</span><span class="v">${s.volume_ratio == null ? "—" : `${Number(s.volume_ratio).toFixed(2)}× ${s.volume_flag || ""}`}</span></div>
         <div class="stat"><span class="k">Risk</span><span class="v">${s.risk_score} / 100</span></div>
         <div class="stat"><span class="k">Signal</span><span class="v">${s.signal}</span></div>
         <div class="stat"><span class="k">Proof</span><span class="v">${data.proof ? data.proof.verdict : "—"}</span></div>

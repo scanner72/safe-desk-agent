@@ -52,7 +52,7 @@ If you need the full 90 seconds, linger on the ticket fields (1% risk, qty `0.00
 
 **User:** `analyze BTCUSDT`
 
-**Agent:** Last **102,450.00**. SMA20 **101,528.94**. SMA50 **99,890.87**. ATR 0.69% → **LOW**. Trend **BULL**. Risk **20 / 100**. Signal **BUY** (setup only — not an order). Offline CSV used because this tape is a rehearsal — not a live chart.
+**Agent:** Last **102,450.00**. SMA20 **101,528.94**. SMA50 **99,890.87**. ATR 0.69% → **LOW**. RSI **overbought** (context only). Volume in line with the recent average. Trend **BULL**. Risk **26 / 100**. Signal **BUY** (setup only — not an order). Offline CSV used because this tape is a rehearsal — not a live chart.
 
 **User:** `proof BTCUSDT` then `policy check`
 
