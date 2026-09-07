@@ -25,6 +25,12 @@ const I18N = {
     try_withdraw: "Try withdraw (must refuse)",
     must_type: "Type exactly OK plus the ticket id. A bare “ok” is rejected.",
     disclaimer: "Not financial advice. Crypto can go to zero. Official MCP only: https://agent.binance.com/mcp/agentic. Binance does not endorse this project.",
+    presets_title: "Demo presets",
+    presets_hint: "One-click judge path. Dry-run only. No live orders.",
+    presets_or: "Or run a demo preset:",
+    preset_ideal: "Ideal setup (Approved path)",
+    preset_risk: "Risk breach (Blocked by Policy)",
+    preset_withdraw: "Withdraw attempt (Forbidden)",
   },
   ru: {
     paper_banner: "PAPER / SIMULATED — не живой PnL Binance. Dry-run включён. Секретов нет.",
@@ -49,6 +55,12 @@ const I18N = {
     try_withdraw: "Попробовать вывод (должен отказать)",
     must_type: "Наберите ровно OK и номер тикета. Голое «ok» не принимается.",
     disclaimer: "Не инвестсовет. Крипта может обнулиться. Только официальный MCP: https://agent.binance.com/mcp/agentic. Binance проект не поддерживает.",
+    presets_title: "Демо-пресеты",
+    presets_hint: "Один клик для судей. Только dry-run. Живых заявок нет.",
+    presets_or: "Или запустите демо-пресет:",
+    preset_ideal: "Идеальный сетап (путь к одобрению)",
+    preset_risk: "Нарушение риска (политика BLOCKED)",
+    preset_withdraw: "Попытка вывода (запрещено)",
   },
 };
 
@@ -200,20 +212,7 @@ async function createTicket() {
   }
   try {
     const { data } = await api("/api/ticket", { method: "POST", body: JSON.stringify(body) });
-    lastTicket = data.ticket;
-    const blocked = (data.blocked_reasons || []).length;
-    out.innerHTML = `
-      <p>${badge(data.ticket.status, blocked ? "skip" : "wait")} ${badge("DRY-RUN", "dry")} ${badge("NOT AN ORDER", "paper")}</p>
-      <p class="ticket-id">${data.ticket.id}</p>
-      <p class="hint">${data.label}</p>
-      <div id="ticket-why"></div>
-      <p>Size ${qty(data.ticket.quantity)} · risk ${money(data.ticket.risk_quote)} · ${data.ticket.symbol} ${data.ticket.side}</p>
-      ${blocked ? `<ul class="err">${data.blocked_reasons.map((r) => `<li>${r}</li>`).join("")}</ul>` : ""}
-    `;
-    renderWhy(data.why, $("#ticket-why"));
-    $("#ok-phrase").placeholder = data.ok_phrase;
-    $("#ok-phrase").dataset.expected = data.ok_phrase;
-    syncApproveButton();
+    paintTicket(data);
     await loadStatus();
     await loadAlerts();
     showPanel("ticket");
@@ -222,10 +221,34 @@ async function createTicket() {
   }
 }
 
+function ticketStatusLabel(status) {
+  return String(status || "").replace(/_/g, "_").toUpperCase();
+}
+
+function paintTicket(data) {
+  const out = $("#ticket-out");
+  lastTicket = data.ticket;
+  const blocked = (data.blocked_reasons || []).length || data.ticket.status === "blocked";
+  out.innerHTML = `
+    <p>${badge(ticketStatusLabel(data.ticket.status), blocked ? "skip" : "wait")} ${badge("DRY-RUN", "dry")} ${badge("NOT AN ORDER", "paper")}</p>
+    <p class="ticket-id">${data.ticket.id}</p>
+    <p class="hint">${data.label}</p>
+    <div id="ticket-why"></div>
+    <p>Size ${qty(data.ticket.quantity)} · risk ${money(data.ticket.risk_quote)} · ${data.ticket.symbol} ${data.ticket.side}</p>
+    ${blocked ? `<ul class="err">${(data.blocked_reasons || []).map((r) => `<li>${r}</li>`).join("")}</ul>` : ""}
+  `;
+  renderWhy(data.why, $("#ticket-why"));
+  $("#ok-phrase").placeholder = data.ok_phrase;
+  $("#ok-phrase").dataset.expected = blocked ? "" : data.ok_phrase;
+  if (blocked) $("#ok-phrase").value = "";
+  syncApproveButton();
+}
+
 function syncApproveButton() {
   const expected = $("#ok-phrase").dataset.expected || "";
   const typed = $("#ok-phrase").value.trim();
-  $("#btn-approve").disabled = !expected || typed.toUpperCase() !== expected.toUpperCase();
+  const blocked = lastTicket && lastTicket.status === "blocked";
+  $("#btn-approve").disabled = blocked || !expected || typed.toUpperCase() !== expected.toUpperCase();
 }
 
 async function approveTicket() {
@@ -355,6 +378,51 @@ function fillDemoDefaults() {
   $("#t-risk").value = "1";
 }
 
+function fillRiskBreachDefaults() {
+  fillDemoDefaults();
+  $("#f-risk").value = "2";
+  $("#t-risk").value = "2";
+}
+
+async function runPreset(name) {
+  const note = $("#preset-out");
+  if (note) setErr(note, "");
+  try {
+    const { data } = await api("/api/demo/preset", {
+      method: "POST",
+      body: JSON.stringify({ name, lang }),
+    });
+    if (data.preset === "withdraw") {
+      $("#alerts-extra").innerHTML = `<p class="err">${data.message}</p>`;
+      if (note) note.innerHTML = `<p class="err">${data.title}: ${data.message}</p>`;
+      await loadAlerts();
+      await loadStatus();
+      showPanel("alerts");
+      return;
+    }
+    if (data.preset === "risk_breach") {
+      fillRiskBreachDefaults();
+    } else {
+      fillDemoDefaults();
+    }
+    if (data.analyze) {
+      lastAnalyze = data.analyze;
+    }
+    if (data.ticket) {
+      paintTicket(data.ticket);
+    }
+    if (note) {
+      const cls = data.blocked ? "err" : "okmsg";
+      note.innerHTML = `<p class="${cls}">${data.title}. ${data.message}</p>`;
+    }
+    await loadStatus();
+    await loadAlerts();
+    showPanel(data.panel || "ticket");
+  } catch (err) {
+    if (note) setErr(note, err.message);
+  }
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
   applyLang();
   fillDemoDefaults();
@@ -375,6 +443,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("#btn-close-tp").addEventListener("click", () => closePaper("take_profit"));
   $("#btn-close-sl").addEventListener("click", () => closePaper("stop"));
   $("#btn-withdraw").addEventListener("click", tryWithdraw);
+  $$(".preset-btn").forEach((b) => {
+    b.addEventListener("click", () => runPreset(b.dataset.preset));
+  });
   $("#f-file").addEventListener("change", async (ev) => {
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;

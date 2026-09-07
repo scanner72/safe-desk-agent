@@ -20,6 +20,8 @@ def test_dashboard_and_health(tmp_path: Path):
     assert "DRY-RUN" in home.text
     assert "PAPER" in home.text
     assert "OK TKT" in home.text
+    assert "Demo presets" in home.text
+    assert "Ideal setup (Approved path)" in home.text
     assert client.get("/static/style.css").status_code == 200
     assert client.get("/static/app.js").status_code == 200
     health = client.get("/health")

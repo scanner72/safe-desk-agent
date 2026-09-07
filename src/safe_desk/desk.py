@@ -39,6 +39,41 @@ from safe_desk.why import WhyEntry, explain_why
 
 Side = Literal["BUY", "SELL"]
 
+# Locked offline demo numbers — same as examples/btc-ohlcv.csv and the web form defaults.
+DEMO_SYMBOL = "BTCUSDT"
+DEMO_SIDE: Side = "BUY"
+DEMO_ENTRY = 102450.0
+DEMO_STOP = 100200.0
+DEMO_TAKE_PROFIT = 106950.0
+DEMO_EQUITY = 1000.0
+DEMO_RISK_PCT = 1.0
+DEMO_RISK_BREACH_PCT = 2.0
+
+PRESET_IDEAL = "ideal"
+PRESET_RISK_BREACH = "risk_breach"
+PRESET_WITHDRAW = "withdraw"
+
+PRESET_CATALOG: tuple[dict[str, str], ...] = (
+    {
+        "name": PRESET_IDEAL,
+        "title": "Ideal setup (Approved path)",
+        "summary": "Sample BTC CSV → analyze → ticket AWAITING_APPROVAL. Still not an order.",
+        "panel": "ticket",
+    },
+    {
+        "name": PRESET_RISK_BREACH,
+        "title": "Risk breach (Blocked by Policy)",
+        "summary": "Same setup at 2% risk. Policy RISK_CAP → BLOCKED. No place path.",
+        "panel": "ticket",
+    },
+    {
+        "name": PRESET_WITHDRAW,
+        "title": "Withdraw attempt (Forbidden)",
+        "summary": "Withdraw is always refused. Writes a WITHDRAW_REFUSED alert.",
+        "panel": "alerts",
+    },
+)
+
 
 def find_repo_root(start: Path | None = None) -> Path:
     here = start or Path(__file__).resolve()
@@ -529,6 +564,122 @@ class Desk:
     def ticket(self, ticket_id: str) -> dict[str, Any] | None:
         return self._tickets.get(ticket_id.upper())
 
+    def list_presets(self) -> dict[str, Any]:
+        return {
+            "presets": [dict(row) for row in PRESET_CATALOG],
+            "dry_run": True,
+            "live_trading": False,
+            "secrets_stored": False,
+            "mcp_url": MCP_ENDPOINT,
+        }
+
+    def run_preset(self, name: str, *, lang: Lang | str = "en") -> dict[str, Any]:
+        """One-click judge paths. Dry-run only. Never places a live order."""
+        language = norm_lang(lang if isinstance(lang, str) else lang)
+        key = _norm_preset_name(name)
+        if key == PRESET_IDEAL:
+            return self._preset_ideal(language)
+        if key == PRESET_RISK_BREACH:
+            return self._preset_risk_breach(language)
+        if key == PRESET_WITHDRAW:
+            return self._preset_withdraw()
+        raise ValueError(
+            f"unknown preset {name!r}. Use ideal, risk_breach, or withdraw."
+        )
+
+    def _preset_ideal(self, lang: Lang) -> dict[str, Any]:
+        analyzed = self.analyze(
+            use_sample=True,
+            symbol=DEMO_SYMBOL,
+            side=DEMO_SIDE,
+            stop=DEMO_STOP,
+            equity=DEMO_EQUITY,
+            risk_pct=DEMO_RISK_PCT,
+            lang=lang,
+        )
+        created = self.create_ticket(
+            symbol=DEMO_SYMBOL,
+            side=DEMO_SIDE,
+            entry=DEMO_ENTRY,
+            stop=DEMO_STOP,
+            equity=DEMO_EQUITY,
+            take_profit=DEMO_TAKE_PROFIT,
+            risk_pct=DEMO_RISK_PCT,
+            use_sample=True,
+            lang=lang,
+        )
+        ticket = created["ticket"]
+        return {
+            "preset": PRESET_IDEAL,
+            "title": "Ideal setup (Approved path)",
+            "panel": "ticket",
+            "message": (
+                "Sample CSV analyzed. Ticket is AWAITING_APPROVAL. "
+                "Not an order until you type OK TKT-… Dry-run stays on."
+            ),
+            "analyze": analyzed,
+            "ticket": created,
+            "blocked": False,
+            "dry_run": True,
+            "ok_phrase": created["ok_phrase"],
+            "ticket_id": ticket["id"],
+            "ticket_status": ticket["status"],
+        }
+
+    def _preset_risk_breach(self, lang: Lang) -> dict[str, Any]:
+        analyzed = self.analyze(
+            use_sample=True,
+            symbol=DEMO_SYMBOL,
+            side=DEMO_SIDE,
+            stop=DEMO_STOP,
+            equity=DEMO_EQUITY,
+            risk_pct=DEMO_RISK_BREACH_PCT,
+            lang=lang,
+        )
+        created = self.create_ticket(
+            symbol=DEMO_SYMBOL,
+            side=DEMO_SIDE,
+            entry=DEMO_ENTRY,
+            stop=DEMO_STOP,
+            equity=DEMO_EQUITY,
+            take_profit=DEMO_TAKE_PROFIT,
+            risk_pct=DEMO_RISK_BREACH_PCT,
+            use_sample=True,
+            lang=lang,
+        )
+        ticket = created["ticket"]
+        return {
+            "preset": PRESET_RISK_BREACH,
+            "title": "Risk breach (Blocked by Policy)",
+            "panel": "ticket",
+            "message": (
+                "Requested 2% risk exceeds the 1% desk cap. "
+                "Policy BLOCKED this ticket. No place path."
+            ),
+            "analyze": analyzed,
+            "ticket": created,
+            "blocked": True,
+            "dry_run": True,
+            "ok_phrase": created["ok_phrase"],
+            "ticket_id": ticket["id"],
+            "ticket_status": ticket["status"],
+            "blocked_reasons": list(created.get("blocked_reasons") or []),
+        }
+
+    def _preset_withdraw(self) -> dict[str, Any]:
+        refused = self.refuse_withdraw(note="demo preset: withdraw")
+        return {
+            "preset": PRESET_WITHDRAW,
+            "title": "Withdraw attempt (Forbidden)",
+            "panel": "alerts",
+            "message": refused["message"],
+            "withdraw": refused,
+            "alerts": self.alerts(),
+            "blocked": True,
+            "refused": True,
+            "dry_run": True,
+        }
+
     def _save_ticket(self, ticket: TradeTicket) -> None:
         data = ticket.to_dict()
         self._tickets[ticket.id] = data
@@ -539,6 +690,23 @@ class Desk:
             tid = row.get("id") or row.get("ticket_id")
             if tid:
                 self._tickets[str(tid).upper()] = row
+
+
+def _norm_preset_name(name: str | None) -> str:
+    key = (name or "").strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "approved": PRESET_IDEAL,
+        "approved_path": PRESET_IDEAL,
+        "ideal_setup": PRESET_IDEAL,
+        "risk": PRESET_RISK_BREACH,
+        "risk_breach": PRESET_RISK_BREACH,
+        "blocked": PRESET_RISK_BREACH,
+        "blocked_by_policy": PRESET_RISK_BREACH,
+        "forbidden": PRESET_WITHDRAW,
+        "withdraw_attempt": PRESET_WITHDRAW,
+        "withdrawal": PRESET_WITHDRAW,
+    }
+    return aliases.get(key, key)
 
 
 def _optional_live(

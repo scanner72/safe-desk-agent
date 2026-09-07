@@ -139,6 +139,8 @@ button.btn.danger { background: var(--skip); color: #fff; border-color: var(--sk
 button.btn.warn { background: var(--paper); color: #fff; border-color: var(--paper); }
 button.btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.presets .btn { flex: 1 1 180px; }
+#preset-out { margin-top: 10px; }
 
 .why { font-size: 1.05rem; }
 .why li { margin: 0 0 8px; }
