@@ -38,6 +38,7 @@ class TradeTicket:
     entry: float
     stop_loss: float
     take_profit: float | None
+    take_profit_2: float | None
     equity_quote: float
     risk_pct: float
     risk_quote: float
@@ -64,6 +65,7 @@ class TradeTicket:
     def render(self) -> str:
         lang = self.lang
         tp = "\u2014" if self.take_profit is None else _num(self.take_profit)
+        tp2 = "\u2014" if self.take_profit_2 is None else _num(self.take_profit_2)
         rr = "\u2014" if self.reward_risk is None else f"{self.reward_risk:.2f}"
         note_block = "\n".join(f"  - {n}" for n in self.notes) or f"  - {t(lang, 'none_notes')}"
         return f"""TICKET {self.id}
@@ -77,6 +79,7 @@ class TradeTicket:
 {t(lang, 'entry'):<13}{_num(self.entry)}
 {t(lang, 'ticket_sl'):<13}{_num(self.stop_loss)}
 {t(lang, 'ticket_tp'):<13}{tp}
+{t(lang, 'ticket_tp2'):<13}{tp2}
 {t(lang, 'equity'):<13}{_num(self.equity_quote)}
 {t(lang, 'risk_pct'):<13}{self.risk_pct:g}%  ({_num(self.risk_quote)} quote)
 {t(lang, 'quantity'):<13}{_qty(self.quantity)}
@@ -119,6 +122,7 @@ def build_ticket(
     stop: float,
     equity: float,
     take_profit: float | None = None,
+    take_profit_2: float | None = None,
     risk_pct: float = 1.0,
     mode: Mode = "dry-run",
     product: str = "SPOT",
@@ -162,6 +166,7 @@ def build_ticket(
         entry=float(entry),
         stop_loss=float(stop),
         take_profit=None if take_profit is None else float(take_profit),
+        take_profit_2=None if take_profit_2 is None else float(take_profit_2),
         equity_quote=sized.equity,
         risk_pct=sized.risk_pct,
         risk_quote=sized.risk_quote,

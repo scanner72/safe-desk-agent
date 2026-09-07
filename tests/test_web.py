@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from safe_desk.desk import Desk
@@ -60,6 +61,9 @@ def test_analyze_sample_then_ticket_ok_journal(tmp_path: Path):
     assert "overbought" in " ".join(data["why"]["sentences"]).lower()
     assert "not an order" in " ".join(data["why"]["sentences"]).lower()
     assert data["size"]["quantity"] == 10.0 / 2250.0
+    assert data["levels"]["k_sl"] == 1.2
+    assert data["chart"]["ohlcv"]
+    assert data["chart"]["levels"]["sl"] == data["levels"]["sl"]
 
     ticket = client.post(
         "/api/ticket",
@@ -101,6 +105,55 @@ def test_analyze_sample_then_ticket_ok_journal(tmp_path: Path):
     assert closed.status_code == 200
     assert closed.json()["event"]["kind"] == "exit"
     assert closed.json()["paper"]["running_pnl"] > 0
+
+
+def test_analyze_without_stop_sizes_from_atr(tmp_path: Path):
+    client = _client(tmp_path)
+    analyzed = client.post(
+        "/api/analyze",
+        json={
+            "use_sample": True,
+            "symbol": "BTCUSDT",
+            "side": "BUY",
+            "equity": 1000,
+            "risk_pct": 1,
+        },
+    )
+    assert analyzed.status_code == 200
+    data = analyzed.json()
+    assert data["stop_source"] == "atr"
+    lv = data["levels"]
+    assert lv["k_sl"] == 1.2
+    assert lv["k_tp1"] == 1.5
+    assert lv["k_tp2"] == 2.5
+    assert lv["sl"] < lv["entry"] < lv["tp1"] < lv["tp2"]
+    assert data["size"]["stop"] == pytest.approx(lv["sl"])
+    assert data["size"]["stop_distance"] == pytest.approx(lv["sl_distance"])
+    raw_qty = 10.0 / lv["sl_distance"]
+    if raw_qty * data["last"] > 1000:
+        assert data["size"]["clamped_to_equity"] is True
+        assert data["size"]["quantity"] == pytest.approx(1000 / data["last"])
+    else:
+        assert data["size"]["quantity"] == pytest.approx(raw_qty)
+    assert data["chart"]["ohlcv"][0]["time"]
+    assert data["suggested_tp2"] == lv["tp2"]
+
+    ticket = client.post(
+        "/api/ticket",
+        json={
+            "symbol": "BTCUSDT",
+            "side": "BUY",
+            "entry": data["last"],
+            "equity": 1000,
+            "use_sample": True,
+        },
+    )
+    assert ticket.status_code == 200
+    body = ticket.json()
+    assert body["ticket"]["stop_loss"] == pytest.approx(lv["sl"])
+    assert body["ticket"]["take_profit"] == pytest.approx(lv["tp1"])
+    assert body["ticket"]["take_profit_2"] == pytest.approx(lv["tp2"])
+    assert body["ticket"]["quantity"] == pytest.approx(data["size"]["quantity"])
 
 
 def test_withdraw_refused_writes_alert(tmp_path: Path):

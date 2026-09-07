@@ -31,6 +31,15 @@ const I18N = {
     preset_ideal: "Ideal setup (Approved path)",
     preset_risk: "Risk breach (Blocked by Policy)",
     preset_withdraw: "Withdraw attempt (Forbidden)",
+    chart_title: "ATR levels (advisory)",
+    chart_hint: "Chart shows ATR-based Entry / SL / TP1 / TP2. Levels refresh from the latest ATR when you re-analyze. Advisory only — not a live trailing order.",
+    chart_entry: "Entry",
+    chart_sl: "SL",
+    chart_tp1: "TP1",
+    chart_tp2: "TP2",
+    chart_offline: "Lightweight Charts CDN unavailable — simple offline chart.",
+    atr_used: "1% size uses the ATR stop distance.",
+    atr_user_stop: "Sizing used your stop. ATR SL/TP1/TP2 below are still suggestions.",
   },
   ru: {
     paper_banner: "PAPER / SIMULATED — не живой PnL Binance. Dry-run включён. Секретов нет.",
@@ -61,12 +70,24 @@ const I18N = {
     preset_ideal: "Идеальный сетап (путь к одобрению)",
     preset_risk: "Нарушение риска (политика BLOCKED)",
     preset_withdraw: "Попытка вывода (запрещено)",
+    chart_title: "Уровни ATR (подсказка)",
+    chart_hint: "График показывает вход, SL, TP1 и TP2 от ATR. Уровни обновляются по последнему ATR при новом разборе. Только подсказка — не биржевой трейлинг.",
+    chart_entry: "Вход",
+    chart_sl: "SL",
+    chart_tp1: "TP1",
+    chart_tp2: "TP2",
+    chart_offline: "CDN Lightweight Charts недоступен — простой офлайн-график.",
+    atr_used: "Размер на 1% риска считает дистанцию до ATR-стопа.",
+    atr_user_stop: "Размер по вашему стопу. SL/TP1/TP2 от ATR ниже — всё ещё подсказки.",
   },
 };
 
 let lang = localStorage.getItem("safe-desk-lang") || "en";
 let lastAnalyze = null;
 let lastTicket = null;
+let lastChart = null;
+const chartHandles = {};
+const LEVEL_COLORS = { entry: "#0f4c5c", sl: "#9b2226", tp1: "#2d6a4f", tp2: "#40916c" };
 
 function t(key) {
   return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
@@ -78,6 +99,10 @@ function applyLang() {
   });
   $$(".lang-toggle button").forEach((b) => b.classList.toggle("on", b.dataset.lang === lang));
   document.documentElement.lang = lang;
+  if (lastChart) {
+    drawChart("analyze-chart", "analyze-legend", lastChart);
+    drawChart("ticket-chart", "ticket-legend", lastChart);
+  }
 }
 
 function showPanel(name) {
@@ -160,6 +185,9 @@ async function runAnalyze(useSample) {
     stop: numOrNull($("#f-stop").value),
     equity: numOrNull($("#f-equity").value),
     risk_pct: numOrNull($("#f-risk").value) || 1,
+    k_sl: numOrNull($("#f-k-sl").value),
+    k_tp1: numOrNull($("#f-k-tp1").value),
+    k_tp2: numOrNull($("#f-k-tp2").value),
     price_json: $("#f-price").value || null,
     balance_json: $("#f-balance").value || null,
     lang,
@@ -182,12 +210,12 @@ async function runAnalyze(useSample) {
       </div>
       <div id="analyze-why"></div>
       ${data.size ? `<p class="hint">1% size: <strong>${qty(data.size.quantity)}</strong> · worth ${money(data.size.notional)} · risk ${money(data.size.risk_quote)}</p>` : ""}
+      ${levelsHint(data)}
       <p class="hint">${data.offline ? "Offline path (sample / CSV). No MCP login used." : "Numbers from pasted MCP-shaped JSON. This app did not call Binance."}</p>
     `;
     renderWhy(data.why, $("#analyze-why"));
-    if (data.last && !$("#t-entry").value) $("#t-entry").value = data.last;
-    if (data.size && !$("#t-stop").value) $("#t-stop").value = data.size.stop;
-    if (data.size && !$("#t-equity").value) $("#t-equity").value = data.size.equity;
+    applyAtrSuggestions(data);
+    showChartFromAnalyze(data);
     await loadStatus();
     await loadAlerts();
   } catch (err) {
@@ -205,17 +233,23 @@ async function createTicket() {
     stop: numOrNull($("#t-stop").value),
     equity: numOrNull($("#t-equity").value),
     take_profit: numOrNull($("#t-tp").value),
+    take_profit_2: numOrNull($("#t-tp2").value),
     risk_pct: numOrNull($("#t-risk").value) || 1,
+    k_sl: numOrNull($("#f-k-sl") && $("#f-k-sl").value),
+    k_tp1: numOrNull($("#f-k-tp1") && $("#f-k-tp1").value),
+    k_tp2: numOrNull($("#f-k-tp2") && $("#f-k-tp2").value),
     use_sample: true,
     lang,
   };
-  if (!body.stop || !body.equity || !body.entry) {
-    setErr(out, "Need entry, stop, and equity (or analyze the sample first).");
+  if (!body.equity || !body.entry) {
+    setErr(out, "Need entry and equity (or analyze the sample first). Stop can come from ATR.");
     return;
   }
   try {
     const { data } = await api("/api/ticket", { method: "POST", body: JSON.stringify(body) });
     paintTicket(data);
+    if (data.chart) showChartFromAnalyze({ chart: data.chart, levels: data.levels });
+    else if (lastAnalyze) showChartFromAnalyze(lastAnalyze);
     await loadStatus();
     await loadAlerts();
     showPanel("ticket");
@@ -238,6 +272,7 @@ function paintTicket(data) {
     <p class="hint">${data.label}</p>
     <div id="ticket-why"></div>
     <p>Size ${qty(data.ticket.quantity)} · risk ${money(data.ticket.risk_quote)} · ${data.ticket.symbol} ${data.ticket.side}</p>
+    ${data.ticket.take_profit_2 != null ? `<p class="hint">TP1 ${money(data.ticket.take_profit)} · TP2 ${money(data.ticket.take_profit_2)}</p>` : ""}
     ${blocked ? `<ul class="err">${(data.blocked_reasons || []).map((r) => `<li>${r}</li>`).join("")}</ul>` : ""}
   `;
   renderWhy(data.why, $("#ticket-why"));
@@ -369,16 +404,164 @@ function numOrNull(v) {
 function fillDemoDefaults() {
   $("#f-symbol").value = "BTCUSDT";
   $("#f-side").value = "BUY";
-  $("#f-stop").value = "100200";
+  $("#f-stop").value = "";
   $("#f-equity").value = "1000";
   $("#f-risk").value = "1";
+  $("#f-k-sl").value = "1.2";
+  $("#f-k-tp1").value = "1.5";
+  $("#f-k-tp2").value = "2.5";
   $("#t-symbol").value = "BTCUSDT";
   $("#t-side").value = "BUY";
   $("#t-entry").value = "102450";
-  $("#t-stop").value = "100200";
+  $("#t-stop").value = "";
   $("#t-equity").value = "1000";
-  $("#t-tp").value = "106950";
+  $("#t-tp").value = "";
+  $("#t-tp2").value = "";
   $("#t-risk").value = "1";
+}
+
+function levelsHint(data) {
+  const lv = data.levels;
+  if (!lv) return "";
+  const src = data.stop_source === "atr" ? t("atr_used") : t("atr_user_stop");
+  return `<p class="hint">${src} SL ${money(lv.sl)} · TP1 ${money(lv.tp1)} · TP2 ${money(lv.tp2)} · k_sl ${lv.k_sl} · k_tp1 ${lv.k_tp1} · k_tp2 ${lv.k_tp2}</p>`;
+}
+
+function applyAtrSuggestions(data) {
+  const lv = data && data.levels;
+  if (!lv) return;
+  $("#t-symbol").value = data.symbol || $("#t-symbol").value;
+  if (data.side) $("#t-side").value = data.side;
+  $("#t-entry").value = lv.entry;
+  $("#t-stop").value = lv.sl;
+  $("#t-tp").value = lv.tp1;
+  $("#t-tp2").value = lv.tp2;
+  if (data.size && data.size.equity) $("#t-equity").value = data.size.equity;
+  if (!$("#f-stop").value) $("#f-stop").value = lv.sl;
+}
+
+function showChartFromAnalyze(data) {
+  lastChart = data && data.chart ? data.chart : null;
+  const has = lastChart && (lastChart.ohlcv || []).length;
+  $("#analyze-chart-card").classList.toggle("hidden", !has);
+  $("#ticket-chart-card").classList.toggle("hidden", !has);
+  if (!has) return;
+  drawChart("analyze-chart", "analyze-legend", lastChart);
+  drawChart("ticket-chart", "ticket-legend", lastChart);
+}
+
+function drawChart(elId, legendId, payload) {
+  const el = document.getElementById(elId);
+  const legend = document.getElementById(legendId);
+  if (!el || !payload) return;
+  const bars = payload.ohlcv || [];
+  const lv = payload.levels || {};
+  if (legend) {
+    legend.innerHTML = [
+      ["entry", t("chart_entry"), lv.entry],
+      ["sl", t("chart_sl"), lv.sl],
+      ["tp1", t("chart_tp1"), lv.tp1],
+      ["tp2", t("chart_tp2"), lv.tp2],
+    ].map(([key, label, price]) =>
+      `<span><i class="swatch" style="background:${LEVEL_COLORS[key]}"></i>${label} <span class="k">${money(price)}</span></span>`
+    ).join("");
+  }
+  if (window.LightweightCharts && window.LightweightCharts.createChart) {
+    drawLightweightChart(el, bars, lv);
+  } else {
+    drawFallbackChart(el, bars, lv);
+  }
+}
+
+function destroyChart(el) {
+  const id = el.id;
+  if (chartHandles[id]) {
+    try { chartHandles[id].remove(); } catch (err) { /* ignore */ }
+    delete chartHandles[id];
+  }
+  el.innerHTML = "";
+}
+
+function drawLightweightChart(el, bars, lv) {
+  destroyChart(el);
+  const chart = LightweightCharts.createChart(el, {
+    width: el.clientWidth || 640,
+    height: 320,
+    layout: { background: { color: "#fffdf8" }, textColor: "#1c2430" },
+    grid: { vertLines: { color: "#eee6d6" }, horzLines: { color: "#eee6d6" } },
+    rightPriceScale: { borderColor: "#d9d1c2" },
+    timeScale: { borderColor: "#d9d1c2" },
+  });
+  const series = chart.addCandlestickSeries({
+    upColor: "#2d6a4f",
+    downColor: "#9b2226",
+    borderVisible: false,
+    wickUpColor: "#2d6a4f",
+    wickDownColor: "#9b2226",
+  });
+  series.setData(bars.map((b) => ({
+    time: b.time,
+    open: b.open,
+    high: b.high,
+    low: b.low,
+    close: b.close,
+  })));
+  const lines = [
+    [lv.entry, LEVEL_COLORS.entry, t("chart_entry")],
+    [lv.sl, LEVEL_COLORS.sl, t("chart_sl")],
+    [lv.tp1, LEVEL_COLORS.tp1, t("chart_tp1")],
+    [lv.tp2, LEVEL_COLORS.tp2, t("chart_tp2")],
+  ];
+  lines.forEach(([price, color, title]) => {
+    if (price == null) return;
+    series.createPriceLine({
+      price,
+      color,
+      lineWidth: 2,
+      lineStyle: LightweightCharts.LineStyle.Solid,
+      axisLabelVisible: true,
+      title,
+    });
+  });
+  chart.timeScale().fitContent();
+  chartHandles[el.id] = chart;
+}
+
+function drawFallbackChart(el, bars, lv) {
+  destroyChart(el);
+  if (!bars.length) return;
+  const w = el.clientWidth || 640;
+  const h = 320;
+  const pad = { l: 12, r: 72, t: 16, b: 24 };
+  const prices = bars.flatMap((b) => [b.high, b.low]);
+  ["entry", "sl", "tp1", "tp2"].forEach((k) => {
+    if (lv[k] != null) prices.push(lv[k]);
+  });
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const span = max - min || 1;
+  const innerW = w - pad.l - pad.r;
+  const innerH = h - pad.t - pad.b;
+  const x = (i) => pad.l + (innerW * i) / Math.max(bars.length - 1, 1);
+  const y = (p) => pad.t + innerH * (1 - (p - min) / span);
+  const path = bars.map((b, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(1)} ${y(b.close).toFixed(1)}`).join(" ");
+  const levelRows = [
+    ["entry", t("chart_entry"), lv.entry],
+    ["sl", t("chart_sl"), lv.sl],
+    ["tp1", t("chart_tp1"), lv.tp1],
+    ["tp2", t("chart_tp2"), lv.tp2],
+  ].filter((row) => row[2] != null);
+  const lines = levelRows.map(([key, label, price]) => {
+    const yy = y(price).toFixed(1);
+    return `<line x1="${pad.l}" x2="${w - pad.r}" y1="${yy}" y2="${yy}" stroke="${LEVEL_COLORS[key]}" stroke-width="1.6"/>
+      <text x="${w - pad.r + 4}" y="${Number(yy) + 4}" fill="${LEVEL_COLORS[key]}" font-size="11">${label}</text>`;
+  }).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="320" role="img" aria-label="${t("chart_title")}">
+    <rect width="${w}" height="${h}" fill="#fffdf8"/>
+    <path d="${path}" fill="none" stroke="#0f4c5c" stroke-width="1.6"/>
+    ${lines}
+  </svg>
+  <p class="hint">${t("chart_offline")}</p>`;
 }
 
 function fillRiskBreachDefaults() {
@@ -410,9 +593,12 @@ async function runPreset(name) {
     }
     if (data.analyze) {
       lastAnalyze = data.analyze;
+      applyAtrSuggestions(data.analyze);
+      showChartFromAnalyze(data.analyze);
     }
     if (data.ticket) {
       paintTicket(data.ticket);
+      if (data.ticket.chart) showChartFromAnalyze({ chart: data.ticket.chart, levels: data.ticket.levels });
     }
     if (note) {
       const cls = data.blocked ? "err" : "okmsg";

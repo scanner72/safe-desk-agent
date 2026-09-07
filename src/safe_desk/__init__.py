@@ -7,6 +7,7 @@ explains why in plain language, and keeps a PAPER journal.
 """
 
 from safe_desk.indicators import atr, realized_vol, rsi, sma, trend_state, volume_ratio
+from safe_desk.levels import atr_levels
 from safe_desk.mcp_input import MCP_ENDPOINT, load_live_quote
 from safe_desk.policy import evaluate_policy, load_policy
 from safe_desk.position_sizing import size_spot
@@ -18,6 +19,7 @@ from safe_desk.why import explain_why
 __all__ = [
     "MCP_ENDPOINT",
     "atr",
+    "atr_levels",
     "build_ticket",
     "evaluate_policy",
     "evaluate_setup",
