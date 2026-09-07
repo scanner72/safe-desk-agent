@@ -82,18 +82,18 @@
         <label class="field">Optional MCP balance JSON
           <textarea id="f-balance" placeholder='{"account":"agentic","balances":[{"asset":"USDT","free":"1000"}]}'></textarea>
         </label>
-        <div class="actions">
+        <div class="actions analyze-ctas">
           <button type="button" class="btn primary" id="btn-live" data-i18n="live_binance">Live from Binance</button>
-          <button type="button" class="btn" id="btn-sample" data-i18n="use_sample">Use sample BTC CSV</button>
+          <button type="button" class="btn outline" id="btn-sample" data-i18n="use_sample">Offline sample (CSV)</button>
           <button type="button" class="btn" id="btn-analyze" data-i18n="run_analyze">Explain this setup</button>
         </div>
+        <p class="hint" data-i18n="live_hint">Live from Binance is the default for judges. Offline sample (CSV) is the fallback when there is no network. Still dry-run until OK TKT-…. No API keys.</p>
         <p class="hint" data-i18n="presets_or">Or run a demo preset:</p>
         <div class="actions presets">
           <button type="button" class="btn primary preset-btn" data-preset="ideal" data-i18n="preset_ideal">Ideal setup (Approved path)</button>
           <button type="button" class="btn warn preset-btn" data-preset="risk_breach" data-i18n="preset_risk">Risk breach (Blocked by Policy)</button>
           <button type="button" class="btn danger preset-btn" data-preset="withdraw" data-i18n="preset_withdraw">Withdraw attempt (Forbidden)</button>
         </div>
-        <p class="hint" data-i18n="live_hint">Live from Binance pulls public ticker + klines shaped like MCP spot.tickerPrice / spot.klines. No API keys. Still dry-run until OK TKT-…. Sample CSV is the offline fallback.</p>
         <p class="hint" data-i18n="chart_hint">Chart shows ATR-based Entry / SL / TP1 / TP2. Levels refresh from the latest ATR when you re-analyze. Advisory only — not a live trailing order.</p>
         <div id="analyze-out"></div>
         <div id="analyze-chart-card" class="chart-card hidden">

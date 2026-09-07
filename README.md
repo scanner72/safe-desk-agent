@@ -76,7 +76,7 @@ docker compose up --build
 
 Open [http://localhost:8765](http://localhost:8765), then:
 
-1. **Analyze → Live from Binance** (badge `LIVE · MCP-shaped`). Sample BTC CSV is the offline fallback if the network is blocked.  
+1. **Analyze → Live from Binance** (badge `LIVE · MCP-shaped`). **Offline sample (CSV)** is the fallback if the network is blocked.  
 2. Ticket → status `AWAITING_APPROVAL` (1% risk, still not an order)  
 3. Type `OK TKT-…` (a bare `ok` is rejected)  
 4. **Paper** journal — **PAPER / SIMULATED**, not live PnL  
@@ -167,7 +167,7 @@ On-screen in the same window:
 | Time | Show |
 |---|---|
 | 0:00 | Web UI dashboard (or README + MCP URL) |
-| 0:08 | Analyze sample CSV — plain-language why ENTER/WAIT/SKIP |
+| 0:08 | Analyze **Live from Binance** — plain-language why ENTER/WAIT/SKIP (CSV is offline fallback) |
 | 0:22 | Ticket + type `ok` (rejected) then `OK TKT-…` |
 | 0:40 | Paper journal labeled **SIMULATED / PAPER** |
 | 0:55 | Alerts: withdraw refused |

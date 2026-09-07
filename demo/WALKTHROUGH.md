@@ -34,7 +34,7 @@ Open two or three panes:
 | Time | Show | Type / say |
 |---|---|---|
 | 0:00–0:08 | Web dashboard **or** README + MCP URL | “Safe Desk. Track A. Official Binance MCP. Dry-run. No terminal required.” |
-| 0:08–0:22 | Analyze (sample CSV) | Plain-language why ENTER/WAIT/SKIP + 1% size. BUY = setup only. |
+| 0:08–0:22 | Analyze (**Live from Binance**; CSV is offline fallback) | Plain-language why ENTER/WAIT/SKIP + 1% size. BUY = setup only. |
 | 0:22–0:40 | Ticket | Create ticket. Type `ok` (rejected) then `OK TKT-…` |
 | 0:40–0:55 | Paper journal | **SIMULATED / PAPER** fill. Not live PnL. |
 | 0:55–1:10 | Alerts | Withdraw refused. Proof/policy alerts if they fired. |

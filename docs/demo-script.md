@@ -52,7 +52,7 @@ If I ask to withdraw, it refuses. That is the product: a copilot that can see th
 | Time | Type / show |
 |---|---|
 | 0:00 | Web UI dashboard **or** README + MCP URL |
-| 0:08 | Analyze **Live from Binance** (or sample CSV) — why ENTER/WAIT/SKIP |
+| 0:08 | Analyze **Live from Binance** (or **Offline sample (CSV)** if no network) — why ENTER/WAIT/SKIP |
 | 0:22 | Create ticket; type `ok` (rejected) then `OK TKT-…` |
 | 0:40 | Paper journal: **SIMULATED / PAPER** running PnL |
 | 0:55 | Alerts: withdraw refused |

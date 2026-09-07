@@ -214,7 +214,7 @@ def _fetch_from_bases(
     detail = " | ".join(errors) if errors else "no public REST host configured"
     raise LiveMarketError(
         f"Could not fetch MCP-shaped market data for {pair}. {detail} "
-        "Offline fallback: Use sample BTC CSV."
+        "Offline fallback: Offline sample (CSV)."
     )
 
 
@@ -249,7 +249,7 @@ def _http_get_json(
     except TimeoutError as exc:
         raise LiveMarketError(
             f"Timed out after {timeout:.0f}s fetching {what}. "
-            "Try again or use the sample BTC CSV offline."
+            "Try again or use Offline sample (CSV)."
         ) from exc
     except urllib.error.HTTPError as exc:
         detail = _http_error_detail(exc)
@@ -258,12 +258,12 @@ def _http_get_json(
         reason = getattr(exc, "reason", exc)
         raise LiveMarketError(
             f"Could not reach Binance public market data for {what}: {reason}. "
-            "Offline fallback: Use sample BTC CSV."
+            "Offline fallback: Offline sample (CSV)."
         ) from exc
     except OSError as exc:
         raise LiveMarketError(
             f"Could not reach Binance public market data for {what}: {exc}. "
-            "Offline fallback: Use sample BTC CSV."
+            "Offline fallback: Offline sample (CSV)."
         ) from exc
 
     if not raw:

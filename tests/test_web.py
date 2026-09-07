@@ -24,7 +24,15 @@ def test_dashboard_and_health(tmp_path: Path):
     assert "Demo presets" in home.text
     assert "Ideal setup (Approved path)" in home.text
     assert "Live from Binance" in home.text
-    assert "Use sample BTC CSV" in home.text
+    assert "Offline sample (CSV)" in home.text
+    assert "Use sample BTC CSV" not in home.text
+    live_pos = home.text.find('id="btn-live"')
+    sample_pos = home.text.find('id="btn-sample"')
+    assert 0 <= live_pos < sample_pos
+    assert 'class="btn primary" id="btn-live"' in home.text
+    assert 'class="btn outline" id="btn-sample"' in home.text
+    assert "default for judges" in home.text
+    assert "fallback when there is no network" in home.text
     assert client.get("/static/style.css").status_code == 200
     assert client.get("/static/app.js").status_code == 200
     health = client.get("/health")

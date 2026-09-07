@@ -136,10 +136,18 @@ button.btn.primary {
   font-weight: 700;
   min-height: 46px;
 }
+button.btn.outline {
+  background: transparent;
+  color: var(--teal);
+  border: 1.5px solid var(--teal);
+  font-weight: 600;
+  min-height: 46px;
+}
 button.btn.danger { background: var(--skip); color: #fff; border-color: var(--skip); }
 button.btn.warn { background: var(--paper); color: #fff; border-color: var(--paper); }
 button.btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.analyze-ctas .btn.primary { flex: 1 1 220px; font-size: 1.02rem; }
 .presets .btn { flex: 1 1 180px; }
 #preset-out { margin-top: 10px; }
 
