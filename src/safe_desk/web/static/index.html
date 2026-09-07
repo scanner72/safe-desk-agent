@@ -61,11 +61,18 @@
           <label class="field">Stop <input id="f-stop" inputmode="decimal" placeholder="ATR SL if empty"></label>
           <label class="field">Equity (Agentic) <input id="f-equity" inputmode="decimal"></label>
           <label class="field">Risk % <input id="f-risk" value="1" inputmode="decimal"></label>
+          <label class="field">Interval
+            <select id="f-interval">
+              <option value="1h" selected>1h</option>
+              <option value="4h">4h</option>
+              <option value="1d">1d</option>
+            </select>
+          </label>
           <label class="field">k SL <input id="f-k-sl" value="1.2" inputmode="decimal"></label>
           <label class="field">k TP1 <input id="f-k-tp1" value="1.5" inputmode="decimal"></label>
           <label class="field">k TP2 <input id="f-k-tp2" value="2.5" inputmode="decimal"></label>
         </div>
-        <label class="field">CSV (or upload)
+        <label class="field">CSV (or upload) — offline fallback
           <input id="f-file" type="file" accept=".csv,text/csv">
           <textarea id="f-csv" placeholder="date,open,high,low,close,volume"></textarea>
         </label>
@@ -76,7 +83,8 @@
           <textarea id="f-balance" placeholder='{"account":"agentic","balances":[{"asset":"USDT","free":"1000"}]}'></textarea>
         </label>
         <div class="actions">
-          <button type="button" class="btn primary" id="btn-sample" data-i18n="use_sample">Use sample BTC CSV</button>
+          <button type="button" class="btn primary" id="btn-live" data-i18n="live_binance">Live from Binance</button>
+          <button type="button" class="btn" id="btn-sample" data-i18n="use_sample">Use sample BTC CSV</button>
           <button type="button" class="btn" id="btn-analyze" data-i18n="run_analyze">Explain this setup</button>
         </div>
         <p class="hint" data-i18n="presets_or">Or run a demo preset:</p>
@@ -85,7 +93,7 @@
           <button type="button" class="btn warn preset-btn" data-preset="risk_breach" data-i18n="preset_risk">Risk breach (Blocked by Policy)</button>
           <button type="button" class="btn danger preset-btn" data-preset="withdraw" data-i18n="preset_withdraw">Withdraw attempt (Forbidden)</button>
         </div>
-        <p class="hint">Offline works without MCP login. Pasted JSON is formatted only — this app never stores secrets and never calls Binance REST.</p>
+        <p class="hint" data-i18n="live_hint">Live from Binance pulls public ticker + klines shaped like MCP spot.tickerPrice / spot.klines. No API keys. Still dry-run until OK TKT-…. Sample CSV is the offline fallback.</p>
         <p class="hint" data-i18n="chart_hint">Chart shows ATR-based Entry / SL / TP1 / TP2. Levels refresh from the latest ATR when you re-analyze. Advisory only — not a live trailing order.</p>
         <div id="analyze-out"></div>
         <div id="analyze-chart-card" class="chart-card hidden">

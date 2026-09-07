@@ -65,6 +65,7 @@ header.top {
 .badge.skip { background: #f8d7da; color: var(--skip); }
 .badge.ok { background: #d8f3dc; color: var(--enter); }
 .badge.fail { background: #f8d7da; color: var(--skip); }
+.badge.live { background: #124c3a; color: #e8fff4; }
 
 .lang-toggle button, nav button, button.btn, label.file {
   border: 1px solid var(--line);

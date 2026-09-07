@@ -8,6 +8,7 @@ from safe_desk.mcp_input import (
     load_json_payload,
     load_live_quote,
     parse_balance_payload,
+    parse_klines_payload,
     parse_price_payload,
 )
 
@@ -74,6 +75,45 @@ def test_repo_example_json_merges():
 def test_load_json_payload_raw_string():
     payload = load_json_payload('{"lastPrice": "1.5", "symbol": "SOLUSDT"}')
     assert parse_price_payload(payload).last == 1.5
+
+
+def test_parse_klines_array_and_objects():
+    bars = parse_klines_payload(
+        [
+            [1_700_000_000_000, "100", "110", "90", "105", "12"],
+            [1_700_003_600_000, "105", "120", "100", "118", "8"],
+        ]
+    )
+    assert len(bars) == 2
+    assert bars[0].open == 100
+    assert bars[0].close == 105
+    assert bars[0].date.startswith("2023-")
+    assert bars[1].volume == 8
+
+    wrapped = parse_klines_payload(
+        {
+            "result": {
+                "data": [
+                    {
+                        "openTime": 1_700_000_000_000,
+                        "open": "10",
+                        "high": "11",
+                        "low": "9",
+                        "close": "10.5",
+                        "volume": "3",
+                    }
+                ]
+            }
+        }
+    )
+    assert len(wrapped) == 1
+    assert wrapped[0].close == 10.5
+
+
+def test_parse_price_source_override():
+    price = parse_price_payload({"symbol": "BTCUSDT", "price": "1"}, source="binance_public_mcp_shaped")
+    assert price.source == "binance_public_mcp_shaped"
+    assert price.last == 1.0
 
 
 def test_rejects_empty_price():

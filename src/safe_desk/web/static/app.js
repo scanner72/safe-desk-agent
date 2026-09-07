@@ -15,6 +15,9 @@ const I18N = {
     ticket_title: "Ticket + human OK",
     paper_title: "Paper journal",
     alerts_title: "Alerts you should see now",
+    live_binance: "Live from Binance",
+    live_badge: "LIVE · MCP-shaped",
+    live_hint: "Live from Binance pulls public ticker + klines shaped like MCP spot.tickerPrice / spot.klines. No API keys. Still dry-run until OK TKT-…. Sample CSV is the offline fallback.",
     use_sample: "Use sample BTC CSV",
     run_analyze: "Explain this setup",
     create_ticket: "Create ticket (still not an order)",
@@ -54,6 +57,9 @@ const I18N = {
     ticket_title: "Тикет + OK человека",
     paper_title: "Бумажный журнал",
     alerts_title: "Какие сигналы видны сейчас",
+    live_binance: "Живые данные Binance",
+    live_badge: "LIVE · MCP-shaped",
+    live_hint: "Живые данные Binance — публичные ticker и klines в форме MCP spot.tickerPrice / spot.klines. Без ключей. Dry-run до OK TKT-…. Пример CSV — офлайн-запас.",
     use_sample: "Взять пример BTC CSV",
     run_analyze: "Объяснить сетап",
     create_ticket: "Создать тикет (ещё не заявка)",
@@ -179,20 +185,28 @@ function renderWhy(why, target) {
   `;
 }
 
-async function runAnalyze(useSample) {
+async function runAnalyze(mode) {
   const out = $("#analyze-out");
   setErr(out, "");
+  const live = mode === "live";
+  const sample = mode === "sample";
+  if (sample) {
+    $("#f-csv").value = "";
+  }
   const body = {
     symbol: $("#f-symbol").value || "BTCUSDT",
     side: $("#f-side").value,
-    use_sample: !!useSample && !$("#f-csv").value,
-    csv_text: $("#f-csv").value || null,
-    stop: numOrNull($("#f-stop").value),
+    use_sample: sample,
+    live,
+    interval: $("#f-interval") ? $("#f-interval").value : "1h",
+    limit: 120,
+    csv_text: live || sample ? null : ($("#f-csv").value || null),
+    stop: live ? null : numOrNull($("#f-stop").value),
     equity: numOrNull($("#f-equity").value),
     risk_pct: numOrNull($("#f-risk").value) || 1,
-    k_sl: numOrNull($("#f-k-sl").value),
-    k_tp1: numOrNull($("#f-k-tp1").value),
-    k_tp2: numOrNull($("#f-k-tp2").value),
+    k_sl: $("#f-k-sl") ? numOrNull($("#f-k-sl").value) : null,
+    k_tp1: $("#f-k-tp1") ? numOrNull($("#f-k-tp1").value) : null,
+    k_tp2: $("#f-k-tp2") ? numOrNull($("#f-k-tp2").value) : null,
     price_json: $("#f-price").value || null,
     balance_json: $("#f-balance").value || null,
     lang,
@@ -200,10 +214,24 @@ async function runAnalyze(useSample) {
   try {
     const { data } = await api("/api/analyze", { method: "POST", body: JSON.stringify(body) });
     lastAnalyze = data;
+    if (data.bars_csv && data.source === "live") {
+      $("#f-csv").value = data.bars_csv;
+    }
     const s = data.setup;
+    const liveBadge = data.source === "live" || data.badge
+      ? badge(data.badge || t("live_badge"), "live")
+      : "";
+    const pathHint = data.source === "live"
+      ? "Public Binance ticker + klines, shaped like MCP spot.tickerPrice / spot.klines. No API keys. Still not an order."
+      : data.offline
+        ? "Offline path (sample / CSV). No MCP login used."
+        : "Numbers from pasted MCP-shaped JSON. This app did not call a Trade tool.";
     out.innerHTML = `
+      <p>${liveBadge} ${badge("DRY-RUN", "dry")} ${badge("NOT AN ORDER", "paper")}</p>
       <div class="grid">
         <div class="stat"><span class="k">Last</span><span class="v">${money(data.last)}</span></div>
+        <div class="stat"><span class="k">SMA20 / 50</span><span class="v">${money(s.sma_fast)} / ${money(s.sma_slow)}</span></div>
+        <div class="stat"><span class="k">ATR SL</span><span class="v">${money(data.suggested_stop)}</span></div>
         <div class="stat"><span class="k">Trend</span><span class="v">${s.trend}</span></div>
         <div class="stat"><span class="k">Higher TF</span><span class="v">${s.htf_trend || "—"} ${s.mtf_state && s.mtf_state !== "UNKNOWN" ? `(${s.mtf_state})` : ""}</span></div>
         <div class="stat"><span class="k">Swings</span><span class="v">${s.vol_regime}</span></div>
@@ -216,9 +244,10 @@ async function runAnalyze(useSample) {
       <div id="analyze-why"></div>
       ${data.size ? `<p class="hint">1% size: <strong>${qty(data.size.quantity)}</strong> · worth ${money(data.size.notional)} · risk ${money(data.size.risk_quote)}</p>` : ""}
       ${levelsHint(data)}
-      <p class="hint">${data.offline ? "Offline path (sample / CSV). No MCP login used." : "Numbers from pasted MCP-shaped JSON. This app did not call Binance."}</p>
+      <p class="hint">${pathHint}</p>
     `;
     renderWhy(data.why, $("#analyze-why"));
+    if (live) $("#f-stop").value = "";
     applyAtrSuggestions(data);
     showChartFromAnalyze(data);
     await loadStatus();
@@ -243,7 +272,9 @@ async function createTicket() {
     k_sl: numOrNull($("#f-k-sl") && $("#f-k-sl").value),
     k_tp1: numOrNull($("#f-k-tp1") && $("#f-k-tp1").value),
     k_tp2: numOrNull($("#f-k-tp2") && $("#f-k-tp2").value),
-    use_sample: true,
+    use_sample: !(lastAnalyze && lastAnalyze.source === "live" && lastAnalyze.bars_csv),
+    live: false,
+    csv_text: lastAnalyze && lastAnalyze.source === "live" ? lastAnalyze.bars_csv : null,
     lang,
   };
   if (!body.equity || !body.entry) {
@@ -629,8 +660,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     });
   });
   $$("nav button").forEach((b) => b.addEventListener("click", () => showPanel(b.dataset.panel)));
-  $("#btn-sample").addEventListener("click", () => runAnalyze(true));
-  $("#btn-analyze").addEventListener("click", () => runAnalyze(false));
+  $("#btn-live").addEventListener("click", () => runAnalyze("live"));
+  $("#btn-sample").addEventListener("click", () => runAnalyze("sample"));
+  $("#btn-analyze").addEventListener("click", () => runAnalyze("csv"));
   $("#btn-ticket").addEventListener("click", createTicket);
   $("#btn-approve").addEventListener("click", approveTicket);
   $("#btn-cancel").addEventListener("click", cancelTicket);

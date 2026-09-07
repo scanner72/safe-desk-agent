@@ -20,7 +20,9 @@ You should see **DRY-RUN**, MCP URL `https://agent.binance.com/mcp/agentic`, eme
 
 ## 2. Analyze
 
-Click **Use sample BTC CSV** (or paste `examples/btc-ohlcv.csv`). Last is **102,450**, equity **1,000**. If Stop is empty, SL / TP1 / TP2 come from ATR(14) (defaults k_sl=1.2, k_tp1=1.5, k_tp2=2.5) and 1% size uses that ATR stop. A chart on Analyze / Ticket shows those levels. They are advisory — not a live trailing order.
+**Judge path:** click **Live from Binance**. The page should show badge **LIVE · MCP-shaped**, fill last/entry from the public ticker, score SMA/ATR from live klines (no CSV required), and draw the ATR SL / TP1 / TP2 chart from that series. Equity can stay **1,000** if the Agentic box is empty.
+
+**Offline fallback:** click **Use sample BTC CSV** (or paste `examples/btc-ohlcv.csv`). Last is **102,450**, equity **1,000**. If Stop is empty, SL / TP1 / TP2 come from ATR(14) (defaults k_sl=1.2, k_tp1=1.5, k_tp2=2.5) and 1% size uses that ATR stop. The same chart is advisory — not a live trailing order.
 
 Expected idea (plain language, not jargon):
 
@@ -55,4 +57,4 @@ Proof REJECT / policy BLOCKED / daily cap also land here when those gates fire.
 
 ## Honesty line (say this on camera)
 
-> This browser flow is a rehearsal on a synthetic CSV. The paper diary is simulated. Live orders still go only through the official Binance Agent OS MCP after a human types OK TKT-…
+> Live from Binance uses public ticker + klines shaped like official MCP tools. The paper diary is simulated. Live orders still go only through the official Binance Agent OS MCP after a human types OK TKT-…

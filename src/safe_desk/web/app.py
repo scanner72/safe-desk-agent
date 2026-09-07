@@ -16,6 +16,15 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from safe_desk import __version__
+from safe_desk.binance_live import (
+    DEFAULT_INTERVAL,
+    DEFAULT_LIMIT,
+    LiveMarketError,
+    fetch_live_market,
+    normalize_interval,
+    normalize_limit,
+    normalize_symbol,
+)
 from safe_desk.desk import Desk, find_repo_root
 from safe_desk.mcp_input import MCP_ENDPOINT
 
@@ -27,6 +36,9 @@ class AnalyzeBody(BaseModel):
     symbol: str = "BTCUSDT"
     side: Literal["BUY", "SELL"] = "BUY"
     use_sample: bool = True
+    live: bool = False
+    interval: str = DEFAULT_INTERVAL
+    limit: int = DEFAULT_LIMIT
     csv_text: str | None = None
     price_json: dict[str, Any] | str | None = None
     balance_json: dict[str, Any] | str | None = None
@@ -53,6 +65,9 @@ class TicketBody(BaseModel):
     k_tp2: float | None = None
     rationale: str = ""
     use_sample: bool = True
+    live: bool = False
+    interval: str = DEFAULT_INTERVAL
+    limit: int = DEFAULT_LIMIT
     csv_text: str | None = None
     price_json: dict[str, Any] | str | None = None
     balance_json: dict[str, Any] | str | None = None
@@ -111,12 +126,39 @@ def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> Fast
     def api_status(request: Request) -> dict[str, Any]:
         return _desk(request).status()
 
+    @application.get("/api/live")
+    def api_live(
+        request: Request,
+        symbol: str = "BTCUSDT",
+        interval: str = DEFAULT_INTERVAL,
+        limit: int = DEFAULT_LIMIT,
+    ) -> dict[str, Any]:
+        try:
+            pair = normalize_symbol(symbol)
+            tf = normalize_interval(interval)
+            count = normalize_limit(limit)
+            market = fetch_live_market(
+                pair,
+                interval=tf,
+                limit=count,
+                urlopen=_live_urlopen(request),
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        except LiveMarketError as exc:
+            raise HTTPException(502, str(exc)) from exc
+        return market.to_dict()
+
     @application.post("/api/analyze")
     def api_analyze(request: Request, body: AnalyzeBody) -> dict[str, Any]:
         try:
+            use_sample = body.use_sample and not body.csv_text and not body.live
             return _desk(request).analyze(
                 csv_text=body.csv_text,
-                use_sample=body.use_sample and not body.csv_text,
+                use_sample=use_sample,
+                live=body.live and not body.csv_text,
+                interval=body.interval,
+                limit=body.limit,
                 symbol=body.symbol,
                 side=body.side,
                 stop=body.stop,
@@ -128,9 +170,12 @@ def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> Fast
                 price_json=body.price_json,
                 balance_json=body.balance_json,
                 lang=body.lang,
+                live_urlopen=_live_urlopen(request),
             )
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
+        except LiveMarketError as exc:
+            raise HTTPException(502, str(exc)) from exc
 
     @application.post("/api/analyze/upload")
     async def api_analyze_upload(
@@ -188,15 +233,21 @@ def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> Fast
                 k_tp1=body.k_tp1,
                 k_tp2=body.k_tp2,
                 rationale=body.rationale,
-                use_sample=body.use_sample,
+                use_sample=body.use_sample and not body.csv_text and not body.live,
+                live=body.live and not body.csv_text,
+                interval=body.interval,
+                limit=body.limit,
                 csv_text=body.csv_text,
                 price_json=body.price_json,
                 balance_json=body.balance_json,
                 require_proof=body.require_proof,
                 lang=body.lang,
+                live_urlopen=_live_urlopen(request),
             )
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
+        except LiveMarketError as exc:
+            raise HTTPException(502, str(exc)) from exc
         return result
 
     @application.post("/api/ticket/approve")
@@ -252,6 +303,10 @@ def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> Fast
 
 def _desk(request: Request) -> Desk:
     return request.app.state.desk
+
+
+def _live_urlopen(request: Request) -> Any:
+    return getattr(request.app.state, "live_urlopen", None)
 
 
 def _maybe_json(raw: str | None) -> dict[str, Any] | str | None:

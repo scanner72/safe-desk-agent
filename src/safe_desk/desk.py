@@ -1,6 +1,7 @@
 """High-level desk facade for the web UI and dry-run OK simulation.
 
-Reuses analyze / proof / policy / ticket. Never calls Binance REST or MCP.
+Reuses analyze / proof / policy / ticket. Public market data (no keys) may
+be fetched for Analyze. Never places an order. Never withdraws.
 """
 
 from __future__ import annotations
@@ -28,9 +29,14 @@ from safe_desk.levels import (
     try_atr_levels,
 )
 from safe_desk.log import append_jsonl, append_proposal, read_jsonl
+from safe_desk.binance_live import (
+    DEFAULT_INTERVAL,
+    DEFAULT_LIMIT,
+    fetch_live_market,
+)
 from safe_desk.mcp_input import MCP_ENDPOINT, LiveQuote, load_live_quote
 from safe_desk.mtf import higher_tf_trend
-from safe_desk.ohlcv import Bar, load_ohlcv, load_ohlcv_text
+from safe_desk.ohlcv import Bar, bars_to_csv, load_ohlcv, load_ohlcv_text
 from safe_desk.policy import (
     PolicyResult,
     evaluate_policy,
@@ -182,6 +188,9 @@ class Desk:
         bars: list[Bar] | None = None,
         csv_text: str | None = None,
         use_sample: bool = False,
+        live: bool = False,
+        interval: str = DEFAULT_INTERVAL,
+        limit: int = DEFAULT_LIMIT,
         symbol: str = "BTCUSDT",
         side: Side = "BUY",
         stop: float | None = None,
@@ -195,27 +204,45 @@ class Desk:
         lang: Lang | str = "en",
         run_proof_gate: bool = True,
         run_policy_gate: bool = True,
+        live_urlopen: Any = None,
     ) -> dict[str, Any]:
         language = norm_lang(lang if isinstance(lang, str) else lang)
         loaded = bars
         source = "bars"
+        market = None
         if loaded is None and csv_text:
             loaded = load_ohlcv_text(csv_text)
             source = "upload"
+        if loaded is None and live:
+            market = fetch_live_market(
+                symbol,
+                interval=interval,
+                limit=limit,
+                urlopen=live_urlopen,
+            )
+            loaded = market.bars
+            source = "live"
         if loaded is None and use_sample:
             loaded = load_ohlcv(self.paths.sample_csv)
             source = "sample"
         if not loaded:
-            raise ValueError("analyze needs a CSV upload, pasted CSV, or use_sample=true")
+            raise ValueError(
+                "analyze needs Live from Binance, a CSV upload, pasted CSV, or use_sample=true"
+            )
 
-        live = _optional_live(price_json, balance_json, symbol)
+        quote = _optional_live(price_json, balance_json, symbol)
         closes = [b.close for b in loaded]
         highs = [b.high for b in loaded]
         lows = [b.low for b in loaded]
         csv_last = closes[-1]
-        last = csv_last if live is None or live.last is None else live.last
-        if equity is None and live is not None:
-            equity = live.equity
+        if quote is not None and quote.last is not None:
+            last = quote.last
+        elif market is not None:
+            last = market.price.last
+        else:
+            last = csv_last
+        if equity is None and quote is not None:
+            equity = quote.equity
 
         volumes = [b.volume for b in loaded]
         fast = sma_last(closes, 20)
@@ -282,6 +309,7 @@ class Desk:
             "side": side,
             "source": source,
             "bars": len(loaded),
+            "bars_csv": bars_to_csv(loaded),
             "csv_last": csv_last,
             "last": last,
             "mode": "dry-run",
@@ -291,7 +319,14 @@ class Desk:
             "policy": None if policy is None else policy.to_dict(),
             "size": None if sized is None else _size_dict(sized),
             "why": why.to_dict(),
-            "live": None if live is None else live.to_dict(),
+            "live": None if quote is None else quote.to_dict(),
+            "live_market": None if market is None else {
+                "source": market.source,
+                "interval": market.interval,
+                "limit": market.limit,
+                "mcp_tools": list(market.mcp_tools),
+                "mcp_url": market.mcp_url,
+            },
             "levels": None if levels is None else levels.to_dict(),
             "suggested_stop": None if levels is None else levels.sl,
             "suggested_tp1": None if levels is None else levels.tp1,
@@ -299,7 +334,8 @@ class Desk:
             "stop_source": "user" if stop is not None else ("atr" if levels is not None else None),
             "chart": _chart_payload(loaded, levels),
             "mcp_url": MCP_ENDPOINT,
-            "offline": live is None,
+            "offline": source != "live" and quote is None,
+            "badge": "LIVE · MCP-shaped" if source == "live" else None,
         }
 
     def create_ticket(
@@ -319,22 +355,41 @@ class Desk:
         rationale: str = "",
         csv_text: str | None = None,
         use_sample: bool = False,
+        live: bool = False,
+        interval: str = DEFAULT_INTERVAL,
+        limit: int = DEFAULT_LIMIT,
+        bars: list[Bar] | None = None,
         price_json: Path | str | dict[str, Any] | None = None,
         balance_json: Path | str | dict[str, Any] | None = None,
         require_proof: bool = False,
         lang: Lang | str = "en",
+        live_urlopen: Any = None,
     ) -> dict[str, Any]:
         language = norm_lang(lang if isinstance(lang, str) else lang)
-        live = _optional_live(price_json, balance_json, symbol)
-        if equity is None and live is not None:
-            equity = live.equity
-        if entry is None and live is not None:
-            entry = live.last
+        quote = _optional_live(price_json, balance_json, symbol)
+        if equity is None and quote is not None:
+            equity = quote.equity
+        if entry is None and quote is not None:
+            entry = quote.last
         extra_notes: list[str] = []
-        if live is not None:
-            extra_notes.extend(live.notes)
+        if quote is not None:
+            extra_notes.extend(quote.notes)
 
-        bars = _load_optional_bars(self, csv_text, use_sample)
+        bars = bars or _load_optional_bars(self, csv_text, use_sample)
+        if bars is None and live:
+            market = fetch_live_market(
+                symbol,
+                interval=interval,
+                limit=limit,
+                urlopen=live_urlopen,
+            )
+            bars = market.bars
+            extra_notes.append(
+                f"Live path: public MCP-shaped {market.source} "
+                f"({', '.join(market.mcp_tools)}). No API keys. Not an order."
+            )
+            if entry is None:
+                entry = market.price.last
         multipliers = parse_multipliers(k_sl, k_tp1, k_tp2)
         levels = _levels_from_optional_bars(bars, entry, side, multipliers)
         if entry is None and levels is not None:
