@@ -108,6 +108,11 @@ function applyLang() {
 function showPanel(name) {
   $$("nav button").forEach((b) => b.classList.toggle("on", b.dataset.panel === name));
   $$("section.panel").forEach((p) => p.classList.toggle("on", p.id === `panel-${name}`));
+  if (lastChart && (name === "analyze" || name === "ticket")) {
+    const elId = name === "analyze" ? "analyze-chart" : "ticket-chart";
+    const legendId = name === "analyze" ? "analyze-legend" : "ticket-legend";
+    requestAnimationFrame(() => drawChart(elId, legendId, lastChart));
+  }
 }
 
 async function api(path, opts = {}) {
@@ -253,6 +258,7 @@ async function createTicket() {
     await loadStatus();
     await loadAlerts();
     showPanel("ticket");
+    if (lastChart) drawChart("ticket-chart", "ticket-legend", lastChart);
   } catch (err) {
     setErr(out, err.message);
   }
