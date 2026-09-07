@@ -1,0 +1,8 @@
+services:
+  safe-desk:
+    build: .
+    image: safe-desk:local
+    container_name: safe-desk-ui
+    ports:
+      - "8765:8765"
+    restart: unless-stopped

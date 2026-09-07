@@ -57,6 +57,18 @@ Screenshot placeholders (add PNGs under `docs/screenshots/` after you record):
 
 Same app via `python -m safe_desk web`. Offline path works **without MCP login** (sample CSV). Live numbers: paste MCP price/balance JSON the agent already fetched — this UI never stores secrets and never calls Binance REST.
 
+### Docker
+
+No local Python install. From the repo root, with [Docker Desktop](https://www.docker.com/products/docker-desktop/):
+
+```bash
+docker compose up --build
+```
+
+Then open [http://localhost:8765](http://localhost:8765). Stop with `docker compose down`.
+
+Dry-run / **PAPER** is the default. No API secrets are needed for the local UI.
+
 ---
 
 ## Connect Binance MCP
@@ -224,6 +236,8 @@ config/policy.example.yaml      desk policy (no secrets)
 logs/paper_journal.jsonl        PAPER diary (gitignored, created at runtime)
 logs/alerts.jsonl               desk alerts (gitignored)
 docs/architecture.md
+Dockerfile                      local UI image (no secrets)
+docker-compose.yml              docker compose up --build → :8765
 docs/submission.md              how to enter
 docs/submission-checklist.md    day-of boxes (follow / repost / reply / survey)
 docs/x-submission-draft.md      ready-to-paste English X text
