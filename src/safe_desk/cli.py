@@ -19,6 +19,7 @@ from safe_desk.indicators import atr, realized_vol, rsi_last, sma_last, volume_r
 from safe_desk.journal import summarize as journal_summary
 from safe_desk.log import append_proposal
 from safe_desk.mcp_input import MCP_ENDPOINT, LiveQuote, load_live_quote
+from safe_desk.mtf import higher_tf_trend
 from safe_desk.ohlcv import load_ohlcv
 from safe_desk.policy import (
     evaluate_policy,
@@ -251,6 +252,7 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
     vol = realized_vol(closes, period=min(20, max(2, len(closes) - 1)))
     rsi_value = rsi_last(closes, 14)
     vol_ratio = volume_ratio(volumes, 20)
+    htf_trend, htf_source = higher_tf_trend(bars)
     report = evaluate_setup(
         last=last,
         sma_fast=fast,
@@ -261,6 +263,8 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
         stop=args.stop,
         rsi_value=rsi_value,
         volume_ratio=vol_ratio,
+        htf_trend=htf_trend,
+        htf_source=htf_source,
         lang=lang,
     )
     print(t(lang, "analyze_header", symbol=args.symbol.upper()))
@@ -285,6 +289,12 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
         vol_txt = f"{report.volume_ratio:.2f}\u00d7 avg  ({report.volume_flag})"
     print(f"{t(lang, 'volume'):<14}{vol_txt}")
     print(f"{t(lang, 'trend'):<14}{report.trend}")
+    if report.htf_trend == "UNKNOWN":
+        htf_txt = "\u2014"
+    else:
+        htf_txt = f"{report.htf_trend} ({report.htf_source})"
+    print(f"{t(lang, 'htf_trend'):<14}{htf_txt}")
+    print(f"{t(lang, 'mtf'):<14}{report.mtf_state}")
     print(f"{t(lang, 'vol_regime'):<14}{report.vol_regime}")
     print(f"{t(lang, 'risk_score'):<14}{report.risk_score} / 100")
     print(f"{t(lang, 'signal'):<14}{report.signal}  {t(lang, 'signal_note')}")

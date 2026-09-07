@@ -23,6 +23,7 @@ from safe_desk.journal import (
 )
 from safe_desk.log import append_jsonl, append_proposal, read_jsonl
 from safe_desk.mcp_input import MCP_ENDPOINT, LiveQuote, load_live_quote
+from safe_desk.mtf import higher_tf_trend
 from safe_desk.ohlcv import Bar, load_ohlcv, load_ohlcv_text
 from safe_desk.policy import (
     PolicyResult,
@@ -212,6 +213,7 @@ class Desk:
         slow = sma_last(closes, 50)
         atr_value = atr(highs, lows, closes, 14)
         vol = realized_vol(closes, period=min(20, max(2, len(closes) - 1)))
+        htf_trend, htf_source = higher_tf_trend(loaded)
         setup = evaluate_setup(
             last=last,
             sma_fast=fast,
@@ -222,6 +224,8 @@ class Desk:
             stop=stop,
             rsi_value=rsi_last(closes, 14),
             volume_ratio=volume_ratio(volumes, 20),
+            htf_trend=htf_trend,
+            htf_source=htf_source,
             lang=language,
         )
 
@@ -751,6 +755,9 @@ def _setup_dict(setup: SetupReport) -> dict[str, Any]:
         "rsi_state": setup.rsi_state,
         "volume_ratio": setup.volume_ratio,
         "volume_flag": setup.volume_flag,
+        "htf_trend": setup.htf_trend,
+        "htf_source": setup.htf_source,
+        "mtf_state": setup.mtf_state,
     }
 
 
@@ -796,6 +803,9 @@ def _setup_from_analysis(analysis: dict[str, Any]) -> SetupReport:
         rsi_state=str(raw.get("rsi_state") or "UNKNOWN"),
         volume_ratio=raw.get("volume_ratio"),
         volume_flag=str(raw.get("volume_flag") or "UNKNOWN"),
+        htf_trend=str(raw.get("htf_trend") or "UNKNOWN"),
+        htf_source=str(raw.get("htf_source") or "unknown"),
+        mtf_state=str(raw.get("mtf_state") or "UNKNOWN"),
     )
 
 

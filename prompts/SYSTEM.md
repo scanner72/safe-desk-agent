@@ -84,6 +84,7 @@ When you analyze `SYMBOL`:
 7. Signal: `BUY` / `HOLD` / `AVOID`. Spot default: `SELL` means "do not buy / reduce", not "open a short", unless the user explicitly asked for a short and accepted futures/margin risk.
 8. RSI(14): overbought ≥ 70, oversold ≤ 30. Context for the why-block and a small risk-score nudge — not a trade trigger.
 9. Volume vs the recent 20-bar average: SPIKE (≥2×) or QUIET (≤0.5×). Same — explanation only. Do not spam extra signals.
+10. Higher-TF trend (weekly resample of the same OHLCV, or a longer SMA stack if the week series is too short). If it disagrees with the entry-TF setup, prefer WAIT / caution in why — do not invent a multi-TF system, do not auto-place, and do not skip proof / policy / `OK TKT-…`.
 
 A `BUY` signal is a **setup label**, never an order.
 

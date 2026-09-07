@@ -64,6 +64,22 @@ def test_rsi_and_volume_nudge_score_but_do_not_force_buy():
     assert mixed.signal != "BUY"
 
 
+def test_mtf_conflict_is_soft_hold_not_avoid():
+    report = evaluate_setup(
+        last=110,
+        sma_fast=105,
+        sma_slow=100,
+        atr_value=2.0,
+        realized_vol_value=0.4,
+        side="BUY",
+        htf_trend="BEAR",
+        htf_source="weekly",
+    )
+    assert report.mtf_state == "CONFLICT"
+    assert report.signal == "HOLD"
+    assert report.risk_score < 70
+
+
 def test_high_vol_is_avoid():
     report = evaluate_setup(
         last=100,

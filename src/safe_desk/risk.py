@@ -7,12 +7,14 @@ from typing import Literal
 
 from safe_desk.i18n import Lang, t
 from safe_desk.indicators import atr_pct, rsi_state, trend_state, volume_flag
+from safe_desk.mtf import mtf_alignment
 
 Side = Literal["BUY", "SELL"]
 Signal = Literal["BUY", "HOLD", "AVOID"]
 VolRegime = Literal["LOW", "NORMAL", "HIGH", "UNKNOWN"]
 RsiState = Literal["OVERBOUGHT", "OVERSOLD", "NEUTRAL", "UNKNOWN"]
 VolumeFlag = Literal["SPIKE", "QUIET", "NORMAL", "UNKNOWN"]
+MtfState = Literal["ALIGNED", "CONFLICT", "UNKNOWN"]
 
 
 @dataclass(frozen=True)
@@ -32,6 +34,9 @@ class SetupReport:
     rsi_state: RsiState = "UNKNOWN"
     volume_ratio: float | None = None
     volume_flag: VolumeFlag = "UNKNOWN"
+    htf_trend: str = "UNKNOWN"
+    htf_source: str = "unknown"
+    mtf_state: MtfState = "UNKNOWN"
 
 
 def vol_regime(atr_percent: float | None) -> VolRegime:
@@ -53,12 +58,16 @@ def risk_score(
     atr_value: float | None,
     rsi_value: float | None = None,
     volume_ratio: float | None = None,
+    mtf_state: str = "UNKNOWN",
+    htf_trend: str | None = None,
     lang: Lang = "en",
 ) -> tuple[int, list[str]]:
     """0–100 danger / quality score. 100 = do not touch.
 
     RSI and volume are context: they can nudge the score and reasons, but
     they do not create a BUY and do not flip SMA/ATR trend or vol regime.
+    Higher-TF conflict is a soft caution (score up, prefer WAIT) — it does
+    not place an order or replace proof / policy / OK TKT-…
     """
     score = 30
     reasons: list[str] = []
@@ -105,6 +114,12 @@ def risk_score(
         score += 3
         reasons.append(t(lang, "volume_quiet", ratio=volume_ratio))
 
+    if mtf_state == "CONFLICT":
+        score += 12
+        reasons.append(t(lang, "mtf_conflict", htf=htf_trend or "UNKNOWN", trend=trend))
+    elif mtf_state == "ALIGNED" and htf_trend:
+        reasons.append(t(lang, "mtf_aligned", htf=htf_trend, trend=trend))
+
     if (
         stop_distance is not None
         and atr_value is not None
@@ -125,9 +140,17 @@ def risk_score(
     return score, reasons
 
 
-def decide_signal(trend: str, regime: VolRegime, score: int, side: Side) -> Signal:
+def decide_signal(
+    trend: str,
+    regime: VolRegime,
+    score: int,
+    side: Side,
+    mtf_state: str = "UNKNOWN",
+) -> Signal:
     if score >= 70 or regime == "HIGH":
         return "AVOID"
+    if mtf_state == "CONFLICT":
+        return "HOLD"
     if side == "BUY" and trend == "BULL" and score < 60:
         return "BUY"
     return "HOLD"
@@ -144,6 +167,8 @@ def evaluate_setup(
     stop: float | None = None,
     rsi_value: float | None = None,
     volume_ratio: float | None = None,
+    htf_trend: str | None = None,
+    htf_source: str = "unknown",
     lang: Lang = "en",
 ) -> SetupReport:
     trend = trend_state(last, sma_fast, sma_slow)
@@ -152,6 +177,8 @@ def evaluate_setup(
     stop_distance = abs(last - stop) if stop is not None else None
     rstate: RsiState = rsi_state(rsi_value)  # type: ignore[assignment]
     vflag: VolumeFlag = volume_flag(volume_ratio)  # type: ignore[assignment]
+    htf = (htf_trend or "UNKNOWN").upper()
+    alignment: MtfState = mtf_alignment(trend, htf)
     score, reasons = risk_score(
         trend=trend,
         side=side,
@@ -160,10 +187,13 @@ def evaluate_setup(
         atr_value=atr_value,
         rsi_value=rsi_value,
         volume_ratio=volume_ratio,
+        mtf_state=alignment,
+        htf_trend=htf,
         lang=lang,
     )
     # Signal stays SMA/ATR/score based. RSI and volume do not force BUY/SELL.
-    signal = decide_signal(trend, regime, score, side)
+    # Higher-TF conflict demotes BUY → HOLD (WAIT), never auto-places.
+    signal = decide_signal(trend, regime, score, side, mtf_state=alignment)
     if signal == "BUY":
         reasons.append(t(lang, "sig_buy"))
     elif signal == "AVOID":
@@ -186,4 +216,7 @@ def evaluate_setup(
         rsi_state=rstate,
         volume_ratio=volume_ratio,
         volume_flag=vflag,
+        htf_trend=htf,
+        htf_source=htf_source,
+        mtf_state=alignment,
     )

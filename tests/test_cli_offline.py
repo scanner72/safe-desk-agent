@@ -23,6 +23,8 @@ def test_sample_csv_analyze_matches_demo(capsys):
     assert "702.1791" in out
     assert "(0.69%)" in out
     assert "BULL" in out
+    assert "Higher TF" in out
+    assert "ALIGNED" in out
     assert "LOW" in out
     assert "26 / 100" in out
     assert "BUY  (setup only — not an order)" in out
