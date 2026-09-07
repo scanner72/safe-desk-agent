@@ -43,8 +43,8 @@ Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 | Section | What you see |
 |---|---|
 | **Dashboard** | Dry-run on, MCP URL, emergency stop, last proof / policy, **demo presets** |
-| **Analyze** | Sample CSV or pasted MCP JSON → why ENTER / WAIT / SKIP (SMA/ATR plus RSI + volume context) + 1% size |
-| **Ticket** | Create a ticket; Approve stays disabled until you type `OK TKT-…` |
+| **Analyze** | Sample CSV or pasted MCP JSON → why ENTER / WAIT / SKIP (SMA/ATR plus RSI + volume context) + 1% size. After analyze, a chart shows **ATR-based Entry / SL / TP1 / TP2** (defaults k_sl=1.2, k_tp1=1.5, k_tp2=2.5). Advisory only; not a live trailing order. Empty Stop → 1% size uses the ATR stop. |
+| **Ticket** | Create a ticket (SL / TP1 / TP2 filled from ATR when you analyzed first); Approve stays disabled until you type `OK TKT-…` |
 | **Paper** | SIMULATED entries / exits and running **PAPER** PnL (not live) |
 | **Alerts** | Proof REJECT, policy BLOCKED, withdraw attempt, daily cap |
 

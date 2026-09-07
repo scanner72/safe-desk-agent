@@ -115,7 +115,7 @@ MCP action   none until OK
 
 Size formula: `risk_quote = equity * risk_pct / 100`, `qty = risk_quote / abs(entry - stop)`, then clamp notional to free equity.
 
-Suggested stop: about 1.0–2.0× ATR beyond the invalidation level, not a random round number. Suggested TP: at least 1.5× stop distance when structure allows; otherwise omit TP and say so.
+Suggested SL / TP1 / TP2 come from ATR(14), not fixed magic numbers (defaults **k_sl=1.2**, **k_tp1=1.5**, **k_tp2=2.5**; configurable). BUY: SL = E − k_sl·ATR, TP1 = E + k_tp1·ATR, TP2 = E + k_tp2·ATR. SELL flips the signs. When new bars update ATR, refresh the *suggestion* (ATR-trail style). This is advisory for the ticket/UI — not a live exchange trailing order. 1% risk uses the ATR stop distance unless the human typed a different stop.
 
 **Gates before this ticket is `AWAITING_APPROVAL`:**
 

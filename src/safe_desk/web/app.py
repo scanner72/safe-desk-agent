@@ -33,6 +33,9 @@ class AnalyzeBody(BaseModel):
     stop: float | None = None
     equity: float | None = None
     risk_pct: float = 1.0
+    k_sl: float | None = None
+    k_tp1: float | None = None
+    k_tp2: float | None = None
     lang: str = "en"
 
 
@@ -40,10 +43,14 @@ class TicketBody(BaseModel):
     symbol: str = "BTCUSDT"
     side: Literal["BUY", "SELL"] = "BUY"
     entry: float | None = None
-    stop: float
+    stop: float | None = None
     equity: float | None = None
     take_profit: float | None = None
+    take_profit_2: float | None = None
     risk_pct: float = 1.0
+    k_sl: float | None = None
+    k_tp1: float | None = None
+    k_tp2: float | None = None
     rationale: str = ""
     use_sample: bool = True
     csv_text: str | None = None
@@ -115,6 +122,9 @@ def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> Fast
                 stop=body.stop,
                 equity=body.equity,
                 risk_pct=body.risk_pct,
+                k_sl=body.k_sl,
+                k_tp1=body.k_tp1,
+                k_tp2=body.k_tp2,
                 price_json=body.price_json,
                 balance_json=body.balance_json,
                 lang=body.lang,
@@ -131,6 +141,9 @@ def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> Fast
         stop: float | None = Form(None),
         equity: float | None = Form(None),
         risk_pct: float = Form(1.0),
+        k_sl: float | None = Form(None),
+        k_tp1: float | None = Form(None),
+        k_tp2: float | None = Form(None),
         price_json: str | None = Form(None),
         balance_json: str | None = Form(None),
         lang: str = Form("en"),
@@ -149,6 +162,9 @@ def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> Fast
                 stop=stop,
                 equity=equity,
                 risk_pct=risk_pct,
+                k_sl=k_sl,
+                k_tp1=k_tp1,
+                k_tp2=k_tp2,
                 price_json=price,
                 balance_json=balance,
                 lang=lang,
@@ -166,7 +182,11 @@ def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> Fast
                 stop=body.stop,
                 equity=body.equity,
                 take_profit=body.take_profit,
+                take_profit_2=body.take_profit_2,
                 risk_pct=body.risk_pct,
+                k_sl=body.k_sl,
+                k_tp1=body.k_tp1,
+                k_tp2=body.k_tp2,
                 rationale=body.rationale,
                 use_sample=body.use_sample,
                 csv_text=body.csv_text,

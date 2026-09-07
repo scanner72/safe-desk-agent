@@ -20,7 +20,7 @@ You should see **DRY-RUN**, MCP URL `https://agent.binance.com/mcp/agentic`, eme
 
 ## 2. Analyze
 
-Click **Use sample BTC CSV** (or paste `examples/btc-ohlcv.csv`). Defaults match the locked demo: last **102,450**, stop **100,200**, equity **1,000**.
+Click **Use sample BTC CSV** (or paste `examples/btc-ohlcv.csv`). Last is **102,450**, equity **1,000**. If Stop is empty, SL / TP1 / TP2 come from ATR(14) (defaults k_sl=1.2, k_tp1=1.5, k_tp2=2.5) and 1% size uses that ATR stop. A chart on Analyze / Ticket shows those levels. They are advisory — not a live trailing order.
 
 Expected idea (plain language, not jargon):
 

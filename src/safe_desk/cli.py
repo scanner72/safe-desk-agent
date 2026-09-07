@@ -16,6 +16,7 @@ from pathlib import Path
 from safe_desk.alerts import emit_from_policy, emit_from_proof, read_alerts
 from safe_desk.i18n import Lang, norm_lang, t
 from safe_desk.indicators import atr, realized_vol, rsi_last, sma_last, volume_ratio
+from safe_desk.levels import parse_multipliers, try_atr_levels
 from safe_desk.journal import summarize as journal_summary
 from safe_desk.log import append_proposal
 from safe_desk.mcp_input import MCP_ENDPOINT, LiveQuote, load_live_quote
@@ -62,6 +63,9 @@ def main(argv: list[str] | None = None) -> int:
     analyze.add_argument("--stop", type=float, default=None)
     analyze.add_argument("--equity", type=float, default=None)
     analyze.add_argument("--risk-pct", type=float, default=1.0)
+    analyze.add_argument("--k-sl", type=float, default=None, help="ATR multiple for SL (default 1.2)")
+    analyze.add_argument("--k-tp1", type=float, default=None, help="ATR multiple for TP1 (default 1.5)")
+    analyze.add_argument("--k-tp2", type=float, default=None, help="ATR multiple for TP2 (default 2.5)")
     _add_live_flags(analyze)
     analyze.add_argument(
         "--with-proof",
@@ -89,9 +93,13 @@ def main(argv: list[str] | None = None) -> int:
     ticket.add_argument("--side", choices=("BUY", "SELL"), default="BUY")
     ticket.add_argument("--equity", type=float, default=None)
     ticket.add_argument("--entry", type=float, default=None)
-    ticket.add_argument("--stop", type=float, required=True)
+    ticket.add_argument("--stop", type=float, default=None)
     ticket.add_argument("--tp", type=float, default=None)
+    ticket.add_argument("--tp2", type=float, default=None)
     ticket.add_argument("--risk-pct", type=float, default=1.0)
+    ticket.add_argument("--k-sl", type=float, default=None, help="ATR multiple for SL when --stop is omitted")
+    ticket.add_argument("--k-tp1", type=float, default=None)
+    ticket.add_argument("--k-tp2", type=float, default=None)
     ticket.add_argument("--mode", choices=("dry-run", "live"), default="dry-run")
     ticket.add_argument("--rationale", default="")
     ticket.add_argument("--log", type=Path, default=Path("logs/proposals.jsonl"))
@@ -253,6 +261,9 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
     rsi_value = rsi_last(closes, 14)
     vol_ratio = volume_ratio(volumes, 20)
     htf_trend, htf_source = higher_tf_trend(bars)
+    multipliers = parse_multipliers(args.k_sl, args.k_tp1, args.k_tp2)
+    levels = try_atr_levels(last, atr_value, args.side, multipliers, trail=True)
+    effective_stop = args.stop if args.stop is not None else (None if levels is None else levels.sl)
     report = evaluate_setup(
         last=last,
         sma_fast=fast,
@@ -260,7 +271,7 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
         atr_value=atr_value,
         realized_vol_value=vol,
         side=args.side,
-        stop=args.stop,
+        stop=effective_stop,
         rsi_value=rsi_value,
         volume_ratio=vol_ratio,
         htf_trend=htf_trend,
@@ -305,15 +316,26 @@ def _cmd_analyze(args: argparse.Namespace, lang: Lang) -> int:
     if live is not None:
         for note in live.notes:
             print(f"  - {note}")
+    if levels is not None:
+        print()
+        print(t(lang, "atr_levels"))
+        print(
+            f"  SL  {_fmt(levels.sl)}   TP1 {_fmt(levels.tp1)}   TP2 {_fmt(levels.tp2)}  "
+            f"(k_sl={levels.multipliers.k_sl:g} k_tp1={levels.multipliers.k_tp1:g} "
+            f"k_tp2={levels.multipliers.k_tp2:g})"
+        )
+        print(f"  {t(lang, 'atr_trail_note')}")
     sized = None
-    if equity and args.stop:
-        sized = size_spot(equity, last, args.stop, args.risk_pct, lang=lang)
+    if equity and effective_stop:
+        sized = size_spot(equity, last, effective_stop, args.risk_pct, lang=lang)
         print()
         print(t(lang, "illustrative_size"))
         print(
             f"  qty {_qty(sized.quantity)}   notional {_fmt(sized.notional)}   "
             f"risk {_fmt(sized.risk_quote)}"
         )
+        if args.stop is None:
+            print("  - Stop from ATR (advisory). 1% risk uses this ATR distance.")
         for note in sized.notes:
             print(f"  - {note}")
     proof = run_proof(bars, symbol=args.symbol, side=args.side)
@@ -382,7 +404,43 @@ def _cmd_ticket(args: argparse.Namespace, lang: Lang) -> int:
     if live is not None:
         extra_notes.extend(live.notes)
 
-    sized = size_spot(equity, entry, args.stop, args.risk_pct, lang=lang)
+    stop = args.stop
+    take_profit = args.tp
+    take_profit_2 = args.tp2
+    proof_bars = None
+    if args.proof_csv is not None:
+        proof_bars = load_ohlcv(args.proof_csv)
+        highs = [b.high for b in proof_bars]
+        lows = [b.low for b in proof_bars]
+        closes = [b.close for b in proof_bars]
+        atr_value = atr(highs, lows, closes, 14)
+        multipliers = parse_multipliers(
+            getattr(args, "k_sl", None),
+            getattr(args, "k_tp1", None),
+            getattr(args, "k_tp2", None),
+        )
+        levels = try_atr_levels(entry, atr_value, args.side, multipliers, trail=True)
+        if levels is not None:
+            if stop is None:
+                stop = levels.sl
+                extra_notes.append(
+                    f"Stop filled from ATR × {levels.multipliers.k_sl:g} (advisory)."
+                )
+            if take_profit is None:
+                take_profit = levels.tp1
+                extra_notes.append(
+                    f"TP1 filled from ATR × {levels.multipliers.k_tp1:g} (advisory)."
+                )
+            if take_profit_2 is None:
+                take_profit_2 = levels.tp2
+                extra_notes.append(
+                    f"TP2 filled from ATR × {levels.multipliers.k_tp2:g} (advisory)."
+                )
+    if stop is None:
+        print("ticket needs --stop, or --proof-csv so an ATR stop can be suggested", file=sys.stderr)
+        return 2
+
+    sized = size_spot(equity, entry, stop, args.risk_pct, lang=lang)
 
     cfg = None
     if not args.no_policy:
@@ -406,8 +464,8 @@ def _cmd_ticket(args: argparse.Namespace, lang: Lang) -> int:
     )
 
     proof: ProofReport | None = None
-    if args.proof_csv is not None:
-        proof = run_proof(load_ohlcv(args.proof_csv), symbol=args.symbol, side=args.side)
+    if proof_bars is not None:
+        proof = run_proof(proof_bars, symbol=args.symbol, side=args.side)
         extra_notes.append(
             f"Proof {proof.verdict} receipt={proof.receipt_hash}: {proof.rationale}"
         )
@@ -434,9 +492,10 @@ def _cmd_ticket(args: argparse.Namespace, lang: Lang) -> int:
         symbol=args.symbol,
         side=args.side,
         entry=entry,
-        stop=args.stop,
+        stop=stop,
         equity=equity,
-        take_profit=args.tp,
+        take_profit=take_profit,
+        take_profit_2=take_profit_2,
         risk_pct=args.risk_pct,
         mode=args.mode,
         rationale=args.rationale,

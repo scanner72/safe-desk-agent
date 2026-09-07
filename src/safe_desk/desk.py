@@ -21,6 +21,12 @@ from safe_desk.journal import (
     append_paper_exit,
     summarize as journal_summary,
 )
+from safe_desk.levels import (
+    AtrLevels,
+    AtrMultipliers,
+    parse_multipliers,
+    try_atr_levels,
+)
 from safe_desk.log import append_jsonl, append_proposal, read_jsonl
 from safe_desk.mcp_input import MCP_ENDPOINT, LiveQuote, load_live_quote
 from safe_desk.mtf import higher_tf_trend
@@ -181,6 +187,9 @@ class Desk:
         stop: float | None = None,
         equity: float | None = None,
         risk_pct: float = 1.0,
+        k_sl: float | None = None,
+        k_tp1: float | None = None,
+        k_tp2: float | None = None,
         price_json: Path | str | dict[str, Any] | None = None,
         balance_json: Path | str | dict[str, Any] | None = None,
         lang: Lang | str = "en",
@@ -214,6 +223,9 @@ class Desk:
         atr_value = atr(highs, lows, closes, 14)
         vol = realized_vol(closes, period=min(20, max(2, len(closes) - 1)))
         htf_trend, htf_source = higher_tf_trend(loaded)
+        multipliers = parse_multipliers(k_sl, k_tp1, k_tp2)
+        levels = try_atr_levels(last, atr_value, side, multipliers, trail=True)
+        effective_stop = stop if stop is not None else (None if levels is None else levels.sl)
         setup = evaluate_setup(
             last=last,
             sma_fast=fast,
@@ -221,7 +233,7 @@ class Desk:
             atr_value=atr_value,
             realized_vol_value=vol,
             side=side,
-            stop=stop,
+            stop=effective_stop,
             rsi_value=rsi_last(closes, 14),
             volume_ratio=volume_ratio(volumes, 20),
             htf_trend=htf_trend,
@@ -236,8 +248,8 @@ class Desk:
             emit_from_proof(proof, path=self.paths.alerts, symbol=symbol)
 
         sized = None
-        if equity and stop:
-            sized = size_spot(equity, last, stop, risk_pct, lang=language)
+        if equity and effective_stop:
+            sized = size_spot(equity, last, effective_stop, risk_pct, lang=language)
 
         policy = None
         if run_policy_gate:
@@ -280,7 +292,12 @@ class Desk:
             "size": None if sized is None else _size_dict(sized),
             "why": why.to_dict(),
             "live": None if live is None else live.to_dict(),
-            "suggested_stop": _suggested_stop(last, atr_value, side),
+            "levels": None if levels is None else levels.to_dict(),
+            "suggested_stop": None if levels is None else levels.sl,
+            "suggested_tp1": None if levels is None else levels.tp1,
+            "suggested_tp2": None if levels is None else levels.tp2,
+            "stop_source": "user" if stop is not None else ("atr" if levels is not None else None),
+            "chart": _chart_payload(loaded, levels),
             "mcp_url": MCP_ENDPOINT,
             "offline": live is None,
         }
@@ -291,10 +308,14 @@ class Desk:
         symbol: str,
         side: Side = "BUY",
         entry: float | None = None,
-        stop: float,
+        stop: float | None = None,
         equity: float | None = None,
         take_profit: float | None = None,
+        take_profit_2: float | None = None,
         risk_pct: float = 1.0,
+        k_sl: float | None = None,
+        k_tp1: float | None = None,
+        k_tp2: float | None = None,
         rationale: str = "",
         csv_text: str | None = None,
         use_sample: bool = False,
@@ -309,12 +330,34 @@ class Desk:
             equity = live.equity
         if entry is None and live is not None:
             entry = live.last
-        if equity is None or entry is None:
-            raise ValueError("ticket needs equity and entry (or MCP-shaped price/balance JSON)")
-
         extra_notes: list[str] = []
         if live is not None:
             extra_notes.extend(live.notes)
+
+        bars = _load_optional_bars(self, csv_text, use_sample)
+        multipliers = parse_multipliers(k_sl, k_tp1, k_tp2)
+        levels = _levels_from_optional_bars(bars, entry, side, multipliers)
+        if entry is None and levels is not None:
+            entry = levels.entry
+        if equity is None or entry is None:
+            raise ValueError("ticket needs equity and entry (or MCP-shaped price/balance JSON)")
+        if stop is None:
+            if levels is None:
+                raise ValueError("ticket needs a stop, or OHLCV so an ATR stop can be suggested")
+            stop = levels.sl
+            extra_notes.append(
+                f"Stop filled from ATR({14}) × {multipliers.k_sl:g} (advisory, not a live trail)."
+            )
+        if take_profit is None and levels is not None:
+            take_profit = levels.tp1
+            extra_notes.append(
+                f"TP1 filled from ATR × {multipliers.k_tp1:g} (advisory)."
+            )
+        if take_profit_2 is None and levels is not None:
+            take_profit_2 = levels.tp2
+            extra_notes.append(
+                f"TP2 filled from ATR × {multipliers.k_tp2:g} (advisory)."
+            )
 
         sized = size_spot(equity, entry, stop, risk_pct, lang=language)
         daily_loss, daily_volume = usage_from_log(self.paths.proposals)
@@ -332,7 +375,6 @@ class Desk:
         self.last_policy = policy
 
         proof = None
-        bars = _load_optional_bars(self, csv_text, use_sample)
         if bars:
             proof = run_proof(bars, symbol=symbol, side=side)
             self.last_proof = proof
@@ -365,6 +407,7 @@ class Desk:
             stop=stop,
             equity=equity,
             take_profit=take_profit,
+            take_profit_2=take_profit_2,
             risk_pct=risk_pct,
             mode="dry-run",
             rationale=rationale,
@@ -393,6 +436,9 @@ class Desk:
                 stop=stop,
                 equity=equity,
                 risk_pct=risk_pct,
+                k_sl=k_sl,
+                k_tp1=k_tp1,
+                k_tp2=k_tp2,
                 lang=language,
                 run_proof_gate=False,
                 run_policy_gate=False,
@@ -421,6 +467,8 @@ class Desk:
             "blocked_reasons": blocked,
             "ok_phrase": f"OK {ticket.id}",
             "label": "DRY-RUN ticket. Not an order until OK TKT-…",
+            "levels": None if levels is None else levels.to_dict(),
+            "chart": None if bars is None else _chart_payload(bars, levels),
         }
 
     def approve(self, phrase: str, *, ticket_id: str | None = None) -> dict[str, Any]:
@@ -599,7 +647,6 @@ class Desk:
             use_sample=True,
             symbol=DEMO_SYMBOL,
             side=DEMO_SIDE,
-            stop=DEMO_STOP,
             equity=DEMO_EQUITY,
             risk_pct=DEMO_RISK_PCT,
             lang=lang,
@@ -608,9 +655,7 @@ class Desk:
             symbol=DEMO_SYMBOL,
             side=DEMO_SIDE,
             entry=DEMO_ENTRY,
-            stop=DEMO_STOP,
             equity=DEMO_EQUITY,
-            take_profit=DEMO_TAKE_PROFIT,
             risk_pct=DEMO_RISK_PCT,
             use_sample=True,
             lang=lang,
@@ -638,7 +683,6 @@ class Desk:
             use_sample=True,
             symbol=DEMO_SYMBOL,
             side=DEMO_SIDE,
-            stop=DEMO_STOP,
             equity=DEMO_EQUITY,
             risk_pct=DEMO_RISK_BREACH_PCT,
             lang=lang,
@@ -647,9 +691,7 @@ class Desk:
             symbol=DEMO_SYMBOL,
             side=DEMO_SIDE,
             entry=DEMO_ENTRY,
-            stop=DEMO_STOP,
             equity=DEMO_EQUITY,
-            take_profit=DEMO_TAKE_PROFIT,
             risk_pct=DEMO_RISK_BREACH_PCT,
             use_sample=True,
             lang=lang,
@@ -777,12 +819,42 @@ def _size_dict(sized: SizeResult) -> dict[str, Any]:
     }
 
 
-def _suggested_stop(last: float, atr_value: float | None, side: Side) -> float | None:
-    if atr_value is None or atr_value <= 0:
+def _levels_from_optional_bars(
+    bars: list[Bar] | None,
+    entry: float | None,
+    side: Side,
+    multipliers: AtrMultipliers,
+) -> AtrLevels | None:
+    if not bars:
         return None
-    if side == "BUY":
-        return last - 2.0 * atr_value
-    return last + 2.0 * atr_value
+    last = bars[-1].close if entry is None else entry
+    atr_value = atr(
+        [b.high for b in bars],
+        [b.low for b in bars],
+        [b.close for b in bars],
+        14,
+    )
+    return try_atr_levels(last, atr_value, side, multipliers, trail=True)
+
+
+def _chart_payload(bars: list[Bar], levels: AtrLevels | None) -> dict[str, Any]:
+    """OHLCV for the UI chart plus the current ATR suggestion (advisory)."""
+    return {
+        "ohlcv": [
+            {
+                "time": b.date or str(i + 1),
+                "open": b.open,
+                "high": b.high,
+                "low": b.low,
+                "close": b.close,
+                "volume": b.volume,
+            }
+            for i, b in enumerate(bars)
+        ],
+        "levels": None if levels is None else levels.to_dict(),
+        "advisory": True,
+        "live_trailing_order": False,
+    }
 
 
 def _setup_from_analysis(analysis: dict[str, Any]) -> SetupReport:
@@ -827,6 +899,7 @@ def _ticket_from_record(record: dict[str, Any]) -> TradeTicket:
         entry=float(record["entry"]),
         stop_loss=float(record["stop_loss"]),
         take_profit=record.get("take_profit"),
+        take_profit_2=record.get("take_profit_2"),
         equity_quote=float(record.get("equity_quote") or 0),
         risk_pct=float(record.get("risk_pct") or 1),
         risk_quote=float(record.get("risk_quote") or 0),
