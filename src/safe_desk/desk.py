@@ -893,7 +893,12 @@ def _levels_from_optional_bars(
 
 
 def _chart_payload(bars: list[Bar], levels: AtrLevels | None) -> dict[str, Any]:
-    """OHLCV for the UI chart plus the current ATR suggestion (advisory)."""
+    """OHLCV for the UI chart plus the current ATR suggestion (advisory).
+
+    ``time`` stays a date/ISO string (live klines are ``…T…Z``). The web UI
+    converts it to unix seconds in ``normalizeChartBars`` before Lightweight
+    Charts ``setData`` — LWC rejects ISO timestamps for intraday candles.
+    """
     return {
         "ohlcv": [
             {
