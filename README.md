@@ -42,18 +42,17 @@ Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 
 | Section | What you see |
 |---|---|
-| **Dashboard** | Dry-run on, MCP URL, emergency stop, last proof / policy |
+| **Dashboard** | Dry-run on, MCP URL, emergency stop, last proof / policy, **demo presets** |
 | **Analyze** | Sample CSV or pasted MCP JSON → plain-language why ENTER / WAIT / SKIP + 1% size |
 | **Ticket** | Create a ticket; Approve stays disabled until you type `OK TKT-…` |
 | **Paper** | SIMULATED entries / exits and running **PAPER** PnL (not live) |
 | **Alerts** | Proof REJECT, policy BLOCKED, withdraw attempt, daily cap |
 
-Screenshot placeholders (add PNGs under `docs/screenshots/` after you record):
+![Local Safe Desk dashboard — DRY-RUN, official MCP URL, demo presets. Not live PnL.](docs/screenshots/dashboard.png)
 
-- _Dashboard_ — dry-run badge, MCP URL, last proof/policy  
-- _Analyze_ — four short “why” sentences a non-trader can read  
-- _Ticket_ — big ticket id; bare `ok` rejected  
-- _Paper journal_ — **PAPER / SIMULATED** banner, not a live equity curve  
+![Ticket tab — AWAITING_APPROVAL, TKT id, OK TKT-… gate. Dry-run; not an order.](docs/screenshots/ticket-ok.png)
+
+![Paper journal — PAPER / SIMULATED diary. Not a live equity curve.](docs/screenshots/paper-journal.png)
 
 Same app via `python -m safe_desk web`. Offline path works **without MCP login** (sample CSV). Live numbers: paste MCP price/balance JSON the agent already fetched — this UI never stores secrets and never calls Binance REST.
 
@@ -68,6 +67,22 @@ docker compose up --build
 Then open [http://localhost:8765](http://localhost:8765). Stop with `docker compose down`.
 
 Dry-run / **PAPER** is the default. No API secrets are needed for the local UI.
+
+### Judge path
+
+```bash
+docker compose up --build
+```
+
+Open [http://localhost:8765](http://localhost:8765), then:
+
+1. **Demo presets** (or Analyze → sample CSV)  
+2. Ticket → status `AWAITING_APPROVAL`  
+3. Type `OK TKT-…` (a bare `ok` is rejected)  
+4. **Paper** journal — **PAPER / SIMULATED**, not live PnL  
+5. **Withdraw attempt** preset — refused
+
+Dry-run stays on. No API secrets. No live orders.
 
 ---
 
@@ -99,7 +114,7 @@ Add a Streamable HTTP MCP server:
 
 ## Demo
 
-**Video (60–90s):** _paste a public X / YouTube / Drive URL here after you record_  
+**Video (60–90s):** TODO — paste a public X / YouTube / Drive URL here after you record. Do not invent a URL.  
 Script: [docs/demo-script.md](docs/demo-script.md) · Shot list: [demo/WALKTHROUGH.md](demo/WALKTHROUGH.md) · Transcripts: [demo/](demo/) (all **SIMULATED**)
 
 Do not invent live PnL. Keep dry-run on. A bare `ok` must fail; only `OK TKT-…` continues.

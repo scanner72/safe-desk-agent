@@ -39,6 +39,14 @@
         <div id="dash-grid" class="grid"></div>
         <div id="dash-notes"></div>
         <p class="hint">Venue: Binance Agentic subaccount only. Withdrawals always refused. Official MCP: <span class="mcp">https://agent.binance.com/mcp/agentic</span></p>
+        <h3 data-i18n="presets_title">Demo presets</h3>
+        <p class="hint" data-i18n="presets_hint">One-click judge path. Dry-run only. No live orders.</p>
+        <div class="actions presets">
+          <button type="button" class="btn primary preset-btn" data-preset="ideal" data-i18n="preset_ideal">Ideal setup (Approved path)</button>
+          <button type="button" class="btn warn preset-btn" data-preset="risk_breach" data-i18n="preset_risk">Risk breach (Blocked by Policy)</button>
+          <button type="button" class="btn danger preset-btn" data-preset="withdraw" data-i18n="preset_withdraw">Withdraw attempt (Forbidden)</button>
+        </div>
+        <div id="preset-out"></div>
       </div>
     </section>
 
@@ -67,6 +75,12 @@
         <div class="actions">
           <button type="button" class="btn primary" id="btn-sample" data-i18n="use_sample">Use sample BTC CSV</button>
           <button type="button" class="btn" id="btn-analyze" data-i18n="run_analyze">Explain this setup</button>
+        </div>
+        <p class="hint" data-i18n="presets_or">Or run a demo preset:</p>
+        <div class="actions presets">
+          <button type="button" class="btn primary preset-btn" data-preset="ideal" data-i18n="preset_ideal">Ideal setup (Approved path)</button>
+          <button type="button" class="btn warn preset-btn" data-preset="risk_breach" data-i18n="preset_risk">Risk breach (Blocked by Policy)</button>
+          <button type="button" class="btn danger preset-btn" data-preset="withdraw" data-i18n="preset_withdraw">Withdraw attempt (Forbidden)</button>
         </div>
         <p class="hint">Offline works without MCP login. Pasted JSON is formatted only — this app never stores secrets and never calls Binance REST.</p>
         <div id="analyze-out"></div>

@@ -73,6 +73,11 @@ class WithdrawBody(BaseModel):
     note: str = "withdraw"
 
 
+class PresetBody(BaseModel):
+    name: str = Field(..., min_length=1)
+    lang: str = "en"
+
+
 def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> FastAPI:
     desk = Desk(root=root or find_repo_root(), log_dir=log_dir)
     application = FastAPI(
@@ -210,6 +215,17 @@ def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> Fast
     def api_withdraw(request: Request, body: WithdrawBody) -> JSONResponse:
         result = _desk(request).refuse_withdraw(note=body.note)
         return JSONResponse(result, status_code=403)
+
+    @application.get("/api/demo/presets")
+    def api_list_presets(request: Request) -> dict[str, Any]:
+        return _desk(request).list_presets()
+
+    @application.post("/api/demo/preset")
+    def api_run_preset(request: Request, body: PresetBody) -> dict[str, Any]:
+        try:
+            return _desk(request).run_preset(body.name, lang=body.lang)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     return application
 

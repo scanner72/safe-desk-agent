@@ -16,6 +16,8 @@ Open `http://127.0.0.1:8765`. Toggle **EN / RU** if you want Russian short label
 
 You should see **DRY-RUN**, MCP URL `https://agent.binance.com/mcp/agentic`, emergency stop **off**, and **PAPER PnL** at 0. Secrets stored: none.
 
+**Demo presets** (Dashboard or Analyze): **Ideal setup** drafts an `AWAITING_APPROVAL` ticket from the sample CSV; **Risk breach** requests 2% risk and lands **BLOCKED** by policy; **Withdraw attempt** is refused and writes an alert. Still dry-run. Still not a live order.
+
 ## 2. Analyze
 
 Click **Use sample BTC CSV** (or paste `examples/btc-ohlcv.csv`). Defaults match the locked demo: last **102,450**, stop **100,200**, equity **1,000**.
