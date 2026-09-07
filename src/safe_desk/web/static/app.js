@@ -528,7 +528,8 @@ function applyAtrSuggestions(data) {
 
 function showChartFromAnalyze(data) {
   lastChart = data && data.chart ? data.chart : null;
-  const has = lastChart && (lastChart.ohlcv || []).length;
+  const ohlcv = lastChart && lastChart.ohlcv ? lastChart.ohlcv : [];
+  const has = ohlcv.length > 0;
   $("#analyze-chart-card").classList.toggle("hidden", !has);
   $("#ticket-chart-card").classList.toggle("hidden", !has);
   if (!has) return;
@@ -568,54 +569,107 @@ function destroyChart(el) {
   el.innerHTML = "";
 }
 
+// CHART_TIME_NORMALIZE_BEGIN
+// Lightweight Charts candlestick setData needs UTCTimestamp (unix seconds)
+// for intraday bars. Live analyze emits ISO-8601 "2026-09-06T15:00:00Z",
+// which LWC treats as invalid → empty chart. Normalize once for LWC + SVG.
+function normalizeChartTime(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 1e12 ? Math.floor(value / 1000) : Math.floor(value);
+  }
+  const text = String(value).trim();
+  if (!text) return null;
+  if (/^-?\d+(\.\d+)?$/.test(text)) {
+    const n = Number(text);
+    if (!Number.isFinite(n)) return null;
+    return n > 1e12 ? Math.floor(n / 1000) : Math.floor(n);
+  }
+  const iso = /^\d{4}-\d{2}-\d{2}$/.test(text) ? `${text}T00:00:00Z` : text;
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? Math.floor(ms / 1000) : null;
+}
+
+function normalizeChartBars(bars) {
+  if (!Array.isArray(bars)) return [];
+  const out = [];
+  for (const bar of bars) {
+    if (!bar) continue;
+    const time = normalizeChartTime(bar.time);
+    const open = Number(bar.open);
+    const high = Number(bar.high);
+    const low = Number(bar.low);
+    const close = Number(bar.close);
+    if (time == null || ![open, high, low, close].every(Number.isFinite)) continue;
+    const row = { time, open, high, low, close };
+    const volume = Number(bar.volume);
+    if (Number.isFinite(volume)) row.volume = volume;
+    out.push(row);
+  }
+  return out;
+}
+// CHART_TIME_NORMALIZE_END
+
 function drawLightweightChart(el, bars, lv) {
+  const data = normalizeChartBars(bars);
+  if (!data.length) {
+    drawFallbackChart(el, bars, lv);
+    return;
+  }
   destroyChart(el);
-  const chart = LightweightCharts.createChart(el, {
-    width: el.clientWidth || 640,
-    height: 320,
-    layout: { background: { color: "#fffdf8" }, textColor: "#1c2430" },
-    grid: { vertLines: { color: "#eee6d6" }, horzLines: { color: "#eee6d6" } },
-    rightPriceScale: { borderColor: "#d9d1c2" },
-    timeScale: { borderColor: "#d9d1c2" },
-  });
-  const series = chart.addCandlestickSeries({
-    upColor: "#2d6a4f",
-    downColor: "#9b2226",
-    borderVisible: false,
-    wickUpColor: "#2d6a4f",
-    wickDownColor: "#9b2226",
-  });
-  series.setData(bars.map((b) => ({
-    time: b.time,
-    open: b.open,
-    high: b.high,
-    low: b.low,
-    close: b.close,
-  })));
-  const lines = [
-    [lv.entry, LEVEL_COLORS.entry, t("chart_entry")],
-    [lv.sl, LEVEL_COLORS.sl, t("chart_sl")],
-    [lv.tp1, LEVEL_COLORS.tp1, t("chart_tp1")],
-    [lv.tp2, LEVEL_COLORS.tp2, t("chart_tp2")],
-  ];
-  lines.forEach(([price, color, title]) => {
-    if (price == null) return;
-    series.createPriceLine({
-      price,
-      color,
-      lineWidth: 2,
-      lineStyle: LightweightCharts.LineStyle.Solid,
-      axisLabelVisible: true,
-      title,
+  let chart = null;
+  try {
+    chart = LightweightCharts.createChart(el, {
+      width: el.clientWidth || 640,
+      height: 320,
+      layout: { background: { color: "#fffdf8" }, textColor: "#1c2430" },
+      grid: { vertLines: { color: "#eee6d6" }, horzLines: { color: "#eee6d6" } },
+      rightPriceScale: { borderColor: "#d9d1c2" },
+      timeScale: { borderColor: "#d9d1c2" },
     });
-  });
-  chart.timeScale().fitContent();
-  chartHandles[el.id] = chart;
+    const series = chart.addCandlestickSeries({
+      upColor: "#2d6a4f",
+      downColor: "#9b2226",
+      borderVisible: false,
+      wickUpColor: "#2d6a4f",
+      wickDownColor: "#9b2226",
+    });
+    series.setData(data);
+    const lines = [
+      [lv.entry, LEVEL_COLORS.entry, t("chart_entry")],
+      [lv.sl, LEVEL_COLORS.sl, t("chart_sl")],
+      [lv.tp1, LEVEL_COLORS.tp1, t("chart_tp1")],
+      [lv.tp2, LEVEL_COLORS.tp2, t("chart_tp2")],
+    ];
+    lines.forEach(([price, color, title]) => {
+      if (price == null) return;
+      series.createPriceLine({
+        price,
+        color,
+        lineWidth: 2,
+        lineStyle: LightweightCharts.LineStyle.Solid,
+        axisLabelVisible: true,
+        title,
+      });
+    });
+    chart.timeScale().fitContent();
+    chartHandles[el.id] = chart;
+  } catch (err) {
+    if (chart) {
+      try { chart.remove(); } catch (cleanup) { /* ignore */ }
+    }
+    drawFallbackChart(el, bars, lv);
+  }
 }
 
 function drawFallbackChart(el, bars, lv) {
   destroyChart(el);
-  if (!bars.length) return;
+  const normalized = normalizeChartBars(bars);
+  const rows = normalized.length
+    ? normalized
+    : (Array.isArray(bars) ? bars : []).filter((b) => b && Number.isFinite(Number(b.close)));
+  if (!rows.length) return;
+  bars = rows;
   const w = el.clientWidth || 640;
   const h = 320;
   const pad = { l: 12, r: 72, t: 16, b: 24 };
