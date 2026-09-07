@@ -20,9 +20,9 @@ You should see **DRY-RUN**, MCP URL `https://agent.binance.com/mcp/agentic`, eme
 
 ## 2. Analyze
 
-**Judge path:** click **Live from Binance**. The page should show badge **LIVE · MCP-shaped**, fill last/entry from the public ticker, score SMA/ATR from live klines (no CSV required), and draw the ATR SL / TP1 / TP2 chart from that series. Equity can stay **1,000** if the Agentic box is empty.
+**Judge path:** click **Live from Binance**. The page should show a compact **LIVE · BTCUSDT · last … · N bars · 1h** chip (not a giant CSV dump), fill last/entry from the public ticker, score SMA/ATR from live klines (no CSV required), and draw the ATR SL / TP1 / TP2 chart from that series. Equity can stay **1,000** if the Agentic box is empty. Live no longer pastes CSV into the form; **Advanced / offline** (closed by default) holds offline paste and optional MCP JSON.
 
-**Offline fallback (no network):** click **Offline sample (CSV)** (or paste `examples/btc-ohlcv.csv`). Last is **102,450**, equity **1,000**. If Stop is empty, SL / TP1 / TP2 come from ATR(14) (defaults k_sl=1.2, k_tp1=1.5, k_tp2=2.5) and 1% size uses that ATR stop. The same chart is advisory — not a live trailing order. Demo presets may still load this sample internally.
+**Offline fallback (no network):** click **Offline sample (CSV)** (or open Advanced and paste `examples/btc-ohlcv.csv`). The chip should read **OFFLINE · sample CSV**, not a prefilled wall of candles. Last is **102,450**, equity **1,000**. If Stop is empty, SL / TP1 / TP2 come from ATR(14) (defaults k_sl=1.2, k_tp1=1.5, k_tp2=2.5) and 1% size uses that ATR stop. The same chart is advisory — not a live trailing order. Demo presets may still load this sample internally.
 
 Expected idea (plain language, not jargon):
 
