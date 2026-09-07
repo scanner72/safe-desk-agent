@@ -49,6 +49,46 @@ def load_ohlcv_text(text: str, *, name: str = "<csv>") -> list[Bar]:
     return bars
 
 
+def bars_to_csv(bars: list[Bar]) -> str:
+    """Serialize bars to the same CSV the upload / sample path already parses."""
+    if not bars:
+        raise ValueError("no bars to serialize")
+    lines = ["date,open,high,low,close,volume"]
+    for bar in bars:
+        lines.append(
+            ",".join(
+                (
+                    bar.date,
+                    _csv_num(bar.open),
+                    _csv_num(bar.high),
+                    _csv_num(bar.low),
+                    _csv_num(bar.close),
+                    _csv_num(bar.volume),
+                )
+            )
+        )
+    return "\n".join(lines) + "\n"
+
+
+def bars_to_dicts(bars: list[Bar]) -> list[dict[str, float | str]]:
+    return [
+        {
+            "date": bar.date,
+            "open": bar.open,
+            "high": bar.high,
+            "low": bar.low,
+            "close": bar.close,
+            "volume": bar.volume,
+        }
+        for bar in bars
+    ]
+
+
+def _csv_num(value: float) -> str:
+    text = f"{float(value):.8f}".rstrip("0").rstrip(".")
+    return text if text else "0"
+
+
 def resample_weekly(bars: list[Bar]) -> list[Bar]:
     """Aggregate daily (or finer) bars into weekly OHLCV.
 

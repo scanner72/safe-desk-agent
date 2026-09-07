@@ -1,7 +1,8 @@
 """Local CLI: analyze CSV bars, size a stop, emit a ticket. No secrets.
 
 Also: merge MCP-shaped price/balance JSON, run the analog proof gate,
-and apply desk policy. This helper never calls Binance REST.
+and apply desk policy. Public Analyze fetch (web UI) uses no API keys
+and never places an order.
 """
 
 from __future__ import annotations

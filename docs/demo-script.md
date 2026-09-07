@@ -31,7 +31,7 @@ python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
 python -m safe_desk.web
 ```
 
-Open `http://127.0.0.1:8765`. Walk Dashboard → Analyze (sample CSV) → Ticket (`ok` fails, `OK TKT-…` writes a **PAPER** fill) → Paper journal → Alerts (withdraw refused). Say out loud that the journal is **SIMULATED / PAPER**, not live PnL. Transcript: [demo/09-web-ui.md](../demo/09-web-ui.md).
+Open `http://127.0.0.1:8765`. Walk Dashboard → Analyze (**Live from Binance**, or sample CSV if offline) → Ticket (`ok` fails, `OK TKT-…` writes a **PAPER** fill) → Paper journal → Alerts (withdraw refused). Say out loud that the journal is **SIMULATED / PAPER**, not live PnL. Transcript: [demo/09-web-ui.md](../demo/09-web-ui.md).
 
 ## Voice-over (copy this, ~60–75 seconds)
 
@@ -52,7 +52,7 @@ If I ask to withdraw, it refuses. That is the product: a copilot that can see th
 | Time | Type / show |
 |---|---|
 | 0:00 | Web UI dashboard **or** README + MCP URL |
-| 0:08 | Analyze sample — plain-language why ENTER/WAIT/SKIP |
+| 0:08 | Analyze **Live from Binance** (or sample CSV) — why ENTER/WAIT/SKIP |
 | 0:22 | Create ticket; type `ok` (rejected) then `OK TKT-…` |
 | 0:40 | Paper journal: **SIMULATED / PAPER** running PnL |
 | 0:55 | Alerts: withdraw refused |

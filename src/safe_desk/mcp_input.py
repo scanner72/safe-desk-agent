@@ -9,8 +9,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from safe_desk.ohlcv import Bar
 
 MCP_ENDPOINT = "https://agent.binance.com/mcp/agentic"
 MCP_DOCS = "https://developers.binance.com/en/docs/agent-native/mcp-server"
@@ -88,7 +91,12 @@ def _looks_like_path(value: str) -> bool:
     return True
 
 
-def parse_price_payload(payload: Any, *, default_symbol: str | None = None) -> LivePrice:
+def parse_price_payload(
+    payload: Any,
+    *,
+    default_symbol: str | None = None,
+    source: str = "mcp_json",
+) -> LivePrice:
     obj = _unwrap(payload)
     if isinstance(obj, list):
         if not obj:
@@ -122,7 +130,95 @@ def parse_price_payload(payload: Any, *, default_symbol: str | None = None) -> L
         bid=bid,
         ask=ask,
         change_pct=change,
+        source=source,
     )
+
+
+def parse_klines_payload(payload: Any) -> list[Bar]:
+    """Parse MCP `spot.klines` / public REST `/api/v3/klines` into Bar rows.
+
+    Accepts the official array-of-arrays shape, a list of OHLC objects,
+    or the usual MCP wrappers (`result` / `data` / …). No network.
+    """
+    obj = _unwrap(payload)
+    if isinstance(obj, dict):
+        inner = obj.get("klines") or obj.get("candles") or obj.get("bars")
+        if isinstance(inner, list):
+            obj = inner
+    if not isinstance(obj, list) or not obj:
+        raise ValueError("klines payload must be a non-empty list")
+
+    bars: list[Bar] = []
+    for row in obj:
+        bar = _bar_from_kline_row(row)
+        if bar is not None:
+            bars.append(bar)
+    if not bars:
+        raise ValueError("klines payload has no usable open/high/low/close rows")
+    return bars
+
+
+def _bar_from_kline_row(row: Any) -> Bar | None:
+    if isinstance(row, (list, tuple)) and len(row) >= 6:
+        open_time = row[0]
+        try:
+            return Bar(
+                date=_kline_date(open_time),
+                open=float(row[1]),
+                high=float(row[2]),
+                low=float(row[3]),
+                close=float(row[4]),
+                volume=float(row[5] or 0),
+            )
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(row, dict):
+        return None
+    inner = _unwrap(row)
+    if not isinstance(inner, dict):
+        return None
+    open_px = _first_number(inner, ("open", "o", "openPrice"))
+    high_px = _first_number(inner, ("high", "h", "highPrice"))
+    low_px = _first_number(inner, ("low", "l", "lowPrice"))
+    close_px = _first_number(inner, ("close", "c", "closePrice"))
+    if None in (open_px, high_px, low_px, close_px):
+        return None
+    volume = _first_number(inner, ("volume", "v", "baseVolume")) or 0.0
+    open_time = (
+        inner.get("openTime")
+        or inner.get("open_time")
+        or inner.get("t")
+        or inner.get("time")
+        or inner.get("date")
+    )
+    return Bar(
+        date=_kline_date(open_time),
+        open=float(open_px),
+        high=float(high_px),
+        low=float(low_px),
+        close=float(close_px),
+        volume=float(volume),
+    )
+
+
+def _kline_date(value: Any) -> str:
+    if value is None or value == "":
+        return ""
+    if isinstance(value, datetime):
+        dt = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(value, (int, float)):
+        ms = float(value)
+        if ms > 1e12:
+            ms /= 1000.0
+        dt = datetime.fromtimestamp(ms, tz=timezone.utc)
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    text = str(value).strip()
+    if not text:
+        return ""
+    if text.isdigit():
+        return _kline_date(int(text))
+    return text
 
 
 def parse_balance_payload(

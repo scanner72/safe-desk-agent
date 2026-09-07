@@ -13,7 +13,7 @@ It also still works as a desk clerk inside Claude / ChatGPT / Cursor / Codex: re
 - **Human approval (`OK TKT-…`) before any trade**
 - **Proof + policy gates** before `AWAITING_APPROVAL`
 - Max **1%** of Agentic equity per ticket
-- No API secrets in this repo — MCP does market data and trading (no Binance REST keys)
+- No API secrets in this repo — Analyze can pull public MCP-shaped ticker/klines; trades still go through official MCP after `OK TKT-…`
 - **PAPER / SIMULATED** journal is not live PnL
 
 > Not financial advice. Not a live track record. Demo numbers are labeled **SIMULATED**. This project is unofficial and not endorsed by Binance.
@@ -43,7 +43,7 @@ Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 | Section | What you see |
 |---|---|
 | **Dashboard** | Dry-run on, MCP URL, emergency stop, last proof / policy, **demo presets** |
-| **Analyze** | Sample CSV or pasted MCP JSON → why ENTER / WAIT / SKIP (SMA/ATR plus RSI + volume context) + 1% size. After analyze, a chart shows **ATR-based Entry / SL / TP1 / TP2** (defaults k_sl=1.2, k_tp1=1.5, k_tp2=2.5). Advisory only; not a live trailing order. Empty Stop → 1% size uses the ATR stop. |
+| **Analyze** | **Live from Binance** (public ticker + klines, MCP-shaped) or sample / pasted CSV → why ENTER / WAIT / SKIP + 1% size. Chart shows **ATR-based Entry / SL / TP1 / TP2** (defaults k_sl=1.2, k_tp1=1.5, k_tp2=2.5). Advisory only; not a live trailing order. Empty Stop → 1% size uses the ATR stop. |
 | **Ticket** | Create a ticket (SL / TP1 / TP2 filled from ATR when you analyzed first); Approve stays disabled until you type `OK TKT-…` |
 | **Paper** | SIMULATED entries / exits and running **PAPER** PnL (not live) |
 | **Alerts** | Proof REJECT, policy BLOCKED, withdraw attempt, daily cap |
@@ -54,7 +54,7 @@ Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 
 ![Paper journal — PAPER / SIMULATED diary. Not a live equity curve.](docs/screenshots/paper-journal.png)
 
-Same app via `python -m safe_desk web`. Offline path works **without MCP login** (sample CSV). Live numbers: paste MCP price/balance JSON the agent already fetched — this UI never stores secrets and never calls Binance REST.
+Same app via `python -m safe_desk web`. **Live from Binance** is the judge path: public `ticker/price` + `klines` shaped like official MCP `spot.tickerPrice` / `spot.klines` (no API keys). Sample BTC CSV and paste-JSON stay as offline fallbacks. Trades stay dry-run until `OK TKT-…`. This UI never stores secrets and never places an order.
 
 ### Docker
 
@@ -76,13 +76,15 @@ docker compose up --build
 
 Open [http://localhost:8765](http://localhost:8765), then:
 
-1. **Demo presets** (or Analyze → sample CSV)  
-2. Ticket → status `AWAITING_APPROVAL`  
+1. **Analyze → Live from Binance** (badge `LIVE · MCP-shaped`). Sample BTC CSV is the offline fallback if the network is blocked.  
+2. Ticket → status `AWAITING_APPROVAL` (1% risk, still not an order)  
 3. Type `OK TKT-…` (a bare `ok` is rejected)  
 4. **Paper** journal — **PAPER / SIMULATED**, not live PnL  
-5. **Withdraw attempt** preset — refused
+5. **Withdraw attempt** preset — refused  
 
-Dry-run stays on. No API secrets. No live orders.
+Demo presets still replay the locked sample CSV. Dry-run stays on. No API secrets. No live orders.
+
+Market data for that Live button uses Binance public REST (`/api/v3/ticker/price`, `/api/v3/klines`) normalized to the same shapes as Agent OS MCP tools `spot.tickerPrice` and `spot.klines`. If `api.binance.com` is geo-blocked (HTTP 451), the helper falls back to `data-api.binance.vision` (same public shapes, still no keys). Balance/equity can stay typed or pasted; an empty Agentic wallet is fine. Trades are still dry-run until `OK TKT-…`.
 
 ---
 
@@ -125,8 +127,9 @@ Details: [prompts/LIVE_VS_OFFLINE.md](prompts/LIVE_VS_OFFLINE.md).
 
 | Path | When | What you run |
 |---|---|---|
-| **Live** | Official MCP is connected at `https://agent.binance.com/mcp/agentic` | LLM calls price / balance / klines, then passes JSON or numbers into `safe_desk quote` / `analyze` / `ticket` (`--price-json`, `--balance-json`). No REST API keys. |
-| **Offline** | Hackathon demo without auth | CSV helper below. Say the bars are **synthetic**. |
+| **Live (web UI)** | Docker / local UI, no MCP login | **Live from Binance** → `GET /api/live` → public ticker + klines, MCP-shaped. No API keys. |
+| **Live (MCP client)** | Official MCP is connected at `https://agent.binance.com/mcp/agentic` | LLM calls price / balance / klines, then passes JSON into `safe_desk` (`--price-json`, `--balance-json`). |
+| **Offline** | Network or MCP login missing | Sample BTC CSV / paste-JSON. Say the bars are **synthetic**. |
 
 Both paths still do **proof → policy → ticket → wait for `OK TKT-…`**. Dry-run stays the default.
 
@@ -241,11 +244,12 @@ Core math is stdlib. The local UI adds FastAPI (installed with `.[dev]`). MCP st
 ```
 prompts/SYSTEM.md               canonical agent spec
 prompts/SAFETY.md               exchange + desk controls
-prompts/LIVE_VS_OFFLINE.md      MCP live path vs CSV offline path
+prompts/LIVE_VS_OFFLINE.md      MCP / public live path vs CSV offline path
 prompts/COMMANDS.md             intents
 prompts/TICKET.md               ticket template
 skills/safe-desk-agent/         portable skill
 src/safe_desk/                  SMA, ATR, RSI, volume cue, 1% sizing, proof, policy, why-entry, tickets
+src/safe_desk/binance_live.py   public MCP-shaped ticker + klines (no keys)
 src/safe_desk/web/              local FastAPI UI (no login, no secrets)
 config/policy.example.yaml      desk policy (no secrets)
 logs/paper_journal.jsonl        PAPER diary (gitignored, created at runtime)

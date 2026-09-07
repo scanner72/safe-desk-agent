@@ -44,8 +44,9 @@ Copy this entire file into Claude Project instructions, a ChatGPT custom GPT, Co
 
 See [LIVE_VS_OFFLINE.md](LIVE_VS_OFFLINE.md). Short version:
 
-- **Live path:** MCP is connected at `https://agent.binance.com/mcp/agentic`. Call price / balance / kline tools, then pass the JSON or the numbers into `python -m safe_desk` (`--price-json`, `--balance-json`) or into the ticket schema below. This helper does **not** call Binance REST and holds no API keys.
-- **Offline path:** MCP login is missing. Run `python -m safe_desk analyze examples/btc-ohlcv.csv`. Say that the CSV is synthetic. Still run proof + policy before a ticket.
+- **Live path (MCP):** MCP is connected at `https://agent.binance.com/mcp/agentic`. Call price / balance / kline tools, then pass the JSON or the numbers into `python -m safe_desk` (`--price-json`, `--balance-json`) or into the ticket schema below. No API keys.
+- **Live path (web UI):** `python -m safe_desk.web` → **Live from Binance**. Public ticker + klines, shaped like MCP `spot.tickerPrice` / `spot.klines` (`source: "binance_public_mcp_shaped"`). No keys. Still dry-run until `OK TKT-…`.
+- **Offline path:** Network or MCP login is missing. Run `python -m safe_desk analyze examples/btc-ohlcv.csv` or click **Use sample BTC CSV**. Say that the CSV is synthetic. Still run proof + policy before a ticket.
 
 Never invent a live fill or a live equity curve on either path.
 

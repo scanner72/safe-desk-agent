@@ -43,7 +43,7 @@ Binance has said it can monitor resulting trades and cannot see agent reasoning.
 
 ## Data flow for one idea
 
-1. **Read** — live path: MCP market data + Account at `https://agent.binance.com/mcp/agentic`. Offline path: local CSV + stated equity. The helper can format MCP-shaped JSON (`safe_desk.mcp_input`) but never calls Binance REST.
+1. **Read** — live path: official MCP market data + Account at `https://agent.binance.com/mcp/agentic`, **or** the web UI **Live from Binance** button (`GET /api/live`) which pulls public REST ticker/klines and labels them `binance_public_mcp_shaped` (same shapes as `spot.tickerPrice` / `spot.klines`, no keys). Offline path: local CSV + stated equity. `safe_desk.mcp_input` still only parses JSON — it does not open a socket.
 2. **Score** — SMA20/SMA50, ATR, RSI(14), volume vs recent average, a weekly (or longer-SMA) higher-TF read, risk score. Helper optional but reproducible. RSI/volume enrich the why-block; a higher-TF conflict is a soft WAIT. None of these force a trade.
 3. **Proof** — leakage-safe analog windows on OHLCV (median forward return / hit rate → APPROVE, WAIT, REJECT).
 4. **Policy** — allowlist, max notional, 1% risk, daily caps, emergency stop. Withdrawals always fail. Fail → ticket `BLOCKED`.
@@ -57,7 +57,7 @@ Binance has said it can monitor resulting trades and cannot see agent reasoning.
 
 Track A is "build an AI agent with Agent OS". Execution belongs to the [official MCP](https://developers.binance.com/en/docs/agent-native/mcp-server). Shipping API keys or a shadow REST client would fight the safety story (no secrets, Agentic-only, human OK).
 
-Core math stays stdlib (indicators, sizing, MCP-shaped JSON, analog proof, YAML/JSON policy, why-entry, ticket JSON, paper journal, alerts). The optional local UI is FastAPI + static HTML (no login, no secrets). JSON keys stay English.
+Core math stays stdlib (indicators, sizing, MCP-shaped JSON, analog proof, YAML/JSON policy, why-entry, ticket JSON, paper journal, alerts). Public Analyze fetch (`safe_desk.binance_live`) uses stdlib `urllib` with a timeout and no API key. The optional local UI is FastAPI + static HTML (no login, no secrets). JSON keys stay English.
 
 ## Defaults
 

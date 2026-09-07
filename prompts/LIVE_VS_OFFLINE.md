@@ -10,7 +10,23 @@ https://agent.binance.com/mcp/agentic
 
 Docs: https://developers.binance.com/en/docs/agent-native/mcp-server
 
-This helper **never** calls Binance REST with API keys. Auth is the official Agent OS MCP OAuth / browser login in the LLM client.
+This helper **never** stores API keys and **never** places an order over REST.
+Auth for account / trade is the official Agent OS MCP OAuth / browser login in the LLM client.
+
+The local web UI can fetch **public** market data (`/api/v3/ticker/price`, `/api/v3/klines`) and label it `source: "binance_public_mcp_shaped"` so Analyze works in Docker without MCP login. Those payloads match official MCP tools `spot.tickerPrice` and `spot.klines`. Paste-JSON and the sample BTC CSV remain the offline fallback.
+
+---
+
+## Live path (web UI — no MCP login)
+
+`python -m safe_desk.web` → Analyze → **Live from Binance**.
+
+- `GET /api/live?symbol=BTCUSDT&interval=1h&limit=120`
+- Returns last price, bars / `bars_csv`, `source: "binance_public_mcp_shaped"`, and `mcp_tools: ["spot.tickerPrice","spot.klines"]`.
+- Equity can stay typed (empty Agentic wallet is fine). Balance paste-JSON is optional.
+- Still dry-run. Still waits for `OK TKT-…`. Still refuses withdraw.
+
+If the public endpoints are unreachable, use **Use sample BTC CSV**.
 
 ---
 
@@ -71,7 +87,7 @@ For a user who does not want the terminal, the same offline path is the local UI
 python -m safe_desk.web
 ```
 
-Open `http://127.0.0.1:8765`. Sample CSV, tickets, `OK TKT-…`, and the PAPER journal all work without MCP login.
+Open `http://127.0.0.1:8765`. **Live from Binance** is the default Analyze path (public MCP-shaped ticker + klines). Sample CSV, paste-JSON, tickets, `OK TKT-…`, and the PAPER journal still work without MCP login.
 
 The place path is still the official MCP after `OK TKT-…`. Offline mode only does math.
 
@@ -81,8 +97,8 @@ The place path is still the official MCP after `OK TKT-…`. Offline mode only d
 
 | Step | Live | Offline |
 |---|---|---|
-| Price / balance | Call MCP tools, then pass JSON or numbers into `safe_desk` / the ticket | Use CSV last + a stated rehearsal equity |
-| Analyze | MCP klines **or** helper on CSV with `--price-json` overlay | `python -m safe_desk analyze` |
+| Price / balance | Call MCP tools, then pass JSON or numbers into `safe_desk` / the ticket | Web **Live from Binance** (public ticker) or CSV last + a stated rehearsal equity |
+| Analyze | MCP klines **or** web Live from Binance **or** helper on CSV with `--price-json` overlay | `python -m safe_desk analyze` / **Use sample BTC CSV** |
 | Proof | Helper on those klines / CSV | `python -m safe_desk proof` |
 | Policy | Always | Always |
 | Ticket | `awaiting_approval` only if policy passes and proof does not block | Same |

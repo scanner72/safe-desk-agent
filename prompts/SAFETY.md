@@ -31,9 +31,9 @@ Treat the Agentic subaccount like a **prepaid card**. Fund only what you can aff
 | Main → Agentic transfer | Always refuse (human UI only) |
 | Internal spot↔futures transfer | Refuse unless a separate `OK TRANSFER` after a warning |
 | Live switch | `ENABLE LIVE` then `I ACCEPT LIVE RISK` |
-| Analyze path | Live = official MCP `https://agent.binance.com/mcp/agentic` then pass JSON/numbers into `safe_desk`. Offline = CSV helper. |
+| Analyze path | Live = official MCP, or web **Live from Binance** (public MCP-shaped ticker/klines, no keys). Offline = CSV / paste-JSON. |
 | Proposal log | `logs/proposals.jsonl` (or a chat JSON line) |
-| Secrets | None. No API keys in this repo. MCP OAuth only. No Binance REST client. |
+| Secrets | None. No API keys in this repo. MCP OAuth for account/trade. Public market data only for Analyze. |
 
 ## Why dry-run is the default
 
