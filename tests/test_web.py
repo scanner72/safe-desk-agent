@@ -52,6 +52,8 @@ def test_analyze_sample_then_ticket_ok_journal(tmp_path: Path):
     assert analyzed.status_code == 200
     data = analyzed.json()
     assert data["setup"]["signal"] == "BUY"
+    assert data["setup"]["htf_trend"] == "BULL"
+    assert data["setup"]["mtf_state"] == "ALIGNED"
     assert data["setup"]["rsi_state"] == "OVERBOUGHT"
     assert data["setup"]["volume_flag"] == "NORMAL"
     assert data["why"]["action"] == "ENTER"

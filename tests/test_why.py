@@ -16,6 +16,8 @@ def _setup(
     rsi_state="UNKNOWN",
     volume_ratio=None,
     volume_flag="UNKNOWN",
+    htf_trend="UNKNOWN",
+    mtf_state="UNKNOWN",
 ) -> SetupReport:
     return SetupReport(
         last=102450,
@@ -33,6 +35,8 @@ def _setup(
         rsi_state=rsi_state,
         volume_ratio=volume_ratio,
         volume_flag=volume_flag,
+        htf_trend=htf_trend,
+        mtf_state=mtf_state,
     )
 
 
@@ -62,6 +66,8 @@ def test_decide_action_matrix():
     assert decide_action(signal="BUY", proof_verdict="REJECT", policy_ok=True) == "SKIP"
     assert decide_action(signal="AVOID", proof_verdict="APPROVE", policy_ok=True) == "SKIP"
     assert decide_action(signal="BUY", proof_verdict="APPROVE", policy_ok=False) == "SKIP"
+    assert decide_action(signal="BUY", proof_verdict="APPROVE", policy_ok=True, mtf_state="CONFLICT") == "WAIT"
+    assert decide_action(signal="BUY", proof_verdict="APPROVE", policy_ok=False, mtf_state="CONFLICT") == "SKIP"
 
 
 def test_why_enter_is_plain_and_not_an_order():
@@ -161,6 +167,22 @@ def test_why_mentions_oversold_and_quiet_volume_ru():
     assert "перепродан" in blob
     assert "тише" in blob
     assert why.action == "WAIT"
+
+
+def test_why_conflict_prefers_wait_not_enter():
+    why = explain_why(
+        setup=_setup(
+            trend="BULL",
+            score=35,
+            signal="BUY",
+            htf_trend="MIXED",
+            mtf_state="CONFLICT",
+        ),
+        proof=_proof("APPROVE"),
+    )
+    assert why.action == "WAIT"
+    assert "Daily drift is up, but the slower trend still looks mixed — wait." in why.sentences
+    assert why.headline.startswith("Why WAIT")
 
 
 def test_why_skips_rsi_volume_when_neutral():

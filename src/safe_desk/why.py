@@ -28,6 +28,8 @@ class WhyEntry:
     proof_verdict: str | None
     policy_ok: bool | None
     lang: Lang = "en"
+    mtf_state: str | None = None
+    htf_trend: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -39,6 +41,8 @@ class WhyEntry:
             "proof_verdict": self.proof_verdict,
             "policy_ok": self.policy_ok,
             "lang": self.lang,
+            "mtf_state": self.mtf_state,
+            "htf_trend": self.htf_trend,
         }
 
     def render(self) -> str:
@@ -61,11 +65,14 @@ def decide_action(
     signal: str | None,
     proof_verdict: str | None,
     policy_ok: bool | None,
+    mtf_state: str | None = None,
 ) -> Action:
     if policy_ok is False:
         return "SKIP"
     if signal == "AVOID" or proof_verdict == "REJECT":
         return "SKIP"
+    if mtf_state == "CONFLICT":
+        return "WAIT"
     if signal == "HOLD" or proof_verdict == "WAIT":
         return "WAIT"
     if signal == "BUY" and proof_verdict in {None, "APPROVE"}:
@@ -88,13 +95,21 @@ def explain_why(
     language = norm_lang(lang if isinstance(lang, str) else lang)
     signal = None if setup is None else setup.signal
     score = None if setup is None else setup.risk_score
+    mtf_state = None if setup is None else setup.mtf_state
+    htf_trend = None if setup is None else setup.htf_trend
     proof_verdict = _proof_verdict(proof)
     policy_ok, policy_reason = _policy_view(policy)
-    action = decide_action(signal=signal, proof_verdict=proof_verdict, policy_ok=policy_ok)
+    action = decide_action(
+        signal=signal,
+        proof_verdict=proof_verdict,
+        policy_ok=policy_ok,
+        mtf_state=mtf_state,
+    )
 
     head: list[str] = []
     if setup is not None:
-        head.append(_trend_sentence(setup.trend, language))
+        mtf_line = _mtf_sentence(setup, language)
+        head.append(mtf_line or _trend_sentence(setup.trend, language))
     texture = _rsi_volume_sentence(setup, language) if setup is not None else None
     atr_line = None
     if setup is not None and (setup.vol_regime in {"HIGH", "UNKNOWN"} or action == "SKIP"):
@@ -139,6 +154,8 @@ def explain_why(
         proof_verdict=proof_verdict,
         policy_ok=policy_ok,
         lang=language,
+        mtf_state=mtf_state,
+        htf_trend=htf_trend,
     )
 
 
@@ -190,6 +207,28 @@ def _rsi_volume_sentence(setup: SetupReport, lang: Lang) -> str | None:
         key = "why_volume_quiet"
     if key is None:
         return None
+    return t(lang, key)
+
+
+def _mtf_sentence(setup: SetupReport, lang: Lang) -> str | None:
+    """One plain sentence when daily and the slower trend agree or fight."""
+    state = setup.mtf_state
+    if state == "ALIGNED":
+        if setup.trend == "BULL":
+            return t(lang, "why_mtf_aligned_up")
+        if setup.trend == "BEAR":
+            return t(lang, "why_mtf_aligned_down")
+        return t(lang, "why_mtf_aligned_mixed")
+    if state != "CONFLICT":
+        return None
+    key = {
+        ("BULL", "MIXED"): "why_mtf_conflict_up_mixed",
+        ("BULL", "BEAR"): "why_mtf_conflict_up_down",
+        ("BEAR", "MIXED"): "why_mtf_conflict_down_mixed",
+        ("BEAR", "BULL"): "why_mtf_conflict_down_up",
+        ("MIXED", "BULL"): "why_mtf_conflict_mixed_up",
+        ("MIXED", "BEAR"): "why_mtf_conflict_mixed_down",
+    }.get((setup.trend, setup.htf_trend), "why_mtf_conflict_up_mixed")
     return t(lang, key)
 
 

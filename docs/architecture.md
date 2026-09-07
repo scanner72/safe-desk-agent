@@ -44,7 +44,7 @@ Binance has said it can monitor resulting trades and cannot see agent reasoning.
 ## Data flow for one idea
 
 1. **Read** — live path: MCP market data + Account at `https://agent.binance.com/mcp/agentic`. Offline path: local CSV + stated equity. The helper can format MCP-shaped JSON (`safe_desk.mcp_input`) but never calls Binance REST.
-2. **Score** — SMA20/SMA50, ATR, RSI(14), volume vs recent average, risk score. Helper optional but reproducible. RSI/volume enrich the why-block; they do not force a trade.
+2. **Score** — SMA20/SMA50, ATR, RSI(14), volume vs recent average, a weekly (or longer-SMA) higher-TF read, risk score. Helper optional but reproducible. RSI/volume enrich the why-block; a higher-TF conflict is a soft WAIT. None of these force a trade.
 3. **Proof** — leakage-safe analog windows on OHLCV (median forward return / hit rate → APPROVE, WAIT, REJECT).
 4. **Policy** — allowlist, max notional, 1% risk, daily caps, emergency stop. Withdrawals always fail. Fail → ticket `BLOCKED`.
 5. **Why** — 2–4 plain sentences (ENTER / WAIT / SKIP) a non-trader can read. Not an order.

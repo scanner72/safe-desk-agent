@@ -149,7 +149,7 @@ python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
   --proof-csv examples/btc-ohlcv.csv
 ```
 
-`analyze` should print **DRY-RUN**, last **102,450.00**, trend **BULL**, vol **LOW**, RSI **overbought** on the sample grind (context only), volume **in line** with the recent average, risk **26 / 100**, signal **BUY** (setup only). The why-block now includes RSI + volume context when stretched, quiet, or spiking — it does not place or force a trade. Full expected printout: [demo/07-cli-offline.md](demo/07-cli-offline.md). Use `python3` if `python` is missing.
+`analyze` should print **DRY-RUN**, last **102,450.00**, trend **BULL**, vol **LOW**, RSI **overbought** on the sample grind (context only), volume **in line** with the recent average, risk **26 / 100**, signal **BUY** (setup only). The why-block now includes RSI + volume context when stretched, quiet, or spiking — it does not place or force a trade. A simple **higher-TF** read (weekly bars from the same CSV) is compared with the daily setup: agreement stays ENTER; disagreement is a soft WAIT / higher risk score — still not an order, and it never skips proof / policy / `OK TKT-…`. Full expected printout: [demo/07-cli-offline.md](demo/07-cli-offline.md). Use `python3` if `python` is missing.
 
 `examples/mcp-*.json` are **SIMULATED** MCP-shaped payloads for rehearsal (same numbers as the CSV). In a live session, replace them with a real MCP tool result.
 
