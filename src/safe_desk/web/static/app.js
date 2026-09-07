@@ -17,6 +17,10 @@ const I18N = {
     alerts_title: "Alerts you should see now",
     live_binance: "Live from Binance",
     live_badge: "LIVE · MCP-shaped",
+    live_chip: "LIVE · {symbol} · last {last} · {bars} bars · {interval}",
+    offline_chip: "OFFLINE · sample CSV",
+    offline_paste_chip: "OFFLINE · pasted CSV",
+    advanced_toggle: "Advanced / offline",
     live_hint: "Live from Binance is the default for judges. Offline sample (CSV) is the fallback when there is no network. Still dry-run until OK TKT-…. No API keys.",
     use_sample: "Offline sample (CSV)",
     run_analyze: "Explain this setup",
@@ -59,6 +63,10 @@ const I18N = {
     alerts_title: "Какие сигналы видны сейчас",
     live_binance: "Живые данные Binance",
     live_badge: "LIVE · MCP-shaped",
+    live_chip: "LIVE · {symbol} · last {last} · {bars} бар · {interval}",
+    offline_chip: "OFFLINE · пример CSV",
+    offline_paste_chip: "OFFLINE · вставленный CSV",
+    advanced_toggle: "Дополнительно / офлайн",
     live_hint: "Живые данные Binance — путь по умолчанию для судей. Офлайн-пример (CSV) — запас, когда нет сети. Dry-run до OK TKT-…. Без ключей.",
     use_sample: "Офлайн-пример (CSV)",
     run_analyze: "Объяснить сетап",
@@ -90,6 +98,7 @@ const I18N = {
 
 let lang = localStorage.getItem("safe-desk-lang") || "en";
 let lastAnalyze = null;
+let lastDataKind = null;
 let lastTicket = null;
 let lastChart = null;
 const chartHandles = {};
@@ -99,12 +108,17 @@ function t(key) {
   return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
 }
 
+function format(template, vars) {
+  return String(template).replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? "" : String(vars[k])));
+}
+
 function applyLang() {
   $$("[data-i18n]").forEach((el) => {
     el.textContent = t(el.dataset.i18n);
   });
   $$(".lang-toggle button").forEach((b) => b.classList.toggle("on", b.dataset.lang === lang));
   document.documentElement.lang = lang;
+  if (lastAnalyze) setSourceChip(lastAnalyze);
   if (lastChart) {
     drawChart("analyze-chart", "analyze-legend", lastChart);
     drawChart("ticket-chart", "ticket-legend", lastChart);
@@ -185,14 +199,50 @@ function renderWhy(why, target) {
   `;
 }
 
+function setSourceChip(data, kind) {
+  const el = $("#analyze-source");
+  if (!el || !data) return;
+  const resolved = kind || lastDataKind || data.source;
+  lastDataKind = resolved === "live" || resolved === "sample" ? resolved : "paste";
+  let text = "";
+  let cls = "offline";
+  if (lastDataKind === "live") {
+    cls = "live";
+    const interval = (data.live_market && data.live_market.interval)
+      || ($("#f-interval") && $("#f-interval").value)
+      || "1h";
+    text = format(t("live_chip"), {
+      symbol: data.symbol || "BTCUSDT",
+      last: money(data.last),
+      bars: data.bars,
+      interval,
+    });
+  } else if (lastDataKind === "sample") {
+    text = t("offline_chip");
+  } else {
+    text = t("offline_paste_chip");
+  }
+  el.textContent = text;
+  el.className = `source-chip ${cls}`;
+  el.hidden = false;
+}
+
+function storedBarsCsv() {
+  return lastAnalyze && lastAnalyze.bars_csv ? lastAnalyze.bars_csv : null;
+}
+
 async function runAnalyze(mode) {
   const out = $("#analyze-out");
   setErr(out, "");
   const live = mode === "live";
   const sample = mode === "sample";
-  if (sample) {
+  if (live || sample) {
     $("#f-csv").value = "";
   }
+  const pasted = ($("#f-csv").value || "").trim();
+  if (live) lastDataKind = "live";
+  else if (sample) lastDataKind = "sample";
+  else if (pasted) lastDataKind = "paste";
   const body = {
     symbol: $("#f-symbol").value || "BTCUSDT",
     side: $("#f-side").value,
@@ -200,7 +250,7 @@ async function runAnalyze(mode) {
     live,
     interval: $("#f-interval") ? $("#f-interval").value : "1h",
     limit: 120,
-    csv_text: live || sample ? null : ($("#f-csv").value || null),
+    csv_text: live || sample ? null : (pasted || storedBarsCsv()),
     stop: live ? null : numOrNull($("#f-stop").value),
     equity: numOrNull($("#f-equity").value),
     risk_pct: numOrNull($("#f-risk").value) || 1,
@@ -214,9 +264,8 @@ async function runAnalyze(mode) {
   try {
     const { data } = await api("/api/analyze", { method: "POST", body: JSON.stringify(body) });
     lastAnalyze = data;
-    if (data.bars_csv && data.source === "live") {
-      $("#f-csv").value = data.bars_csv;
-    }
+    $("#f-csv").value = pasted;
+    setSourceChip(data, lastDataKind);
     const s = data.setup;
     const liveBadge = data.source === "live" || data.badge
       ? badge(data.badge || t("live_badge"), "live")
@@ -630,6 +679,8 @@ async function runPreset(name) {
     }
     if (data.analyze) {
       lastAnalyze = data.analyze;
+      lastDataKind = data.analyze.source === "live" ? "live" : "sample";
+      setSourceChip(data.analyze, lastDataKind);
       applyAtrSuggestions(data.analyze);
       showChartFromAnalyze(data.analyze);
     }

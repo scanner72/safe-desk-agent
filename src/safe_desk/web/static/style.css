@@ -128,6 +128,46 @@ input, select, textarea {
 }
 textarea { min-height: 88px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85rem; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.form-grid-compact {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  margin-top: 8px;
+}
+.form-grid-compact input,
+.form-grid-compact select { padding: 7px 10px; font-size: 0.9rem; }
+
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: 10px 0 6px;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: #124c3a;
+  color: #e8fff4;
+}
+.source-chip.offline {
+  background: #efe6d4;
+  color: #5c4a28;
+}
+.source-chip.hidden,
+.source-chip[hidden] { display: none; }
+
+details.advanced {
+  margin-top: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 8px 12px 12px;
+  background: #faf6ee;
+}
+details.advanced summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 6px 0;
+}
+details.advanced .field { margin-top: 10px; }
 
 button.btn.primary {
   background: var(--teal);

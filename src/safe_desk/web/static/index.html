@@ -53,14 +53,21 @@
     <section id="panel-analyze" class="panel">
       <div class="card">
         <h2 data-i18n="analyze_title">What is the setup?</h2>
+        <div class="actions analyze-ctas">
+          <button type="button" class="btn primary" id="btn-live" data-i18n="live_binance">Live from Binance</button>
+          <button type="button" class="btn outline" id="btn-sample" data-i18n="use_sample">Offline sample (CSV)</button>
+        </div>
+        <div id="analyze-source" class="source-chip hidden" hidden></div>
         <div class="form-grid">
           <label class="field">Symbol <input id="f-symbol" value="BTCUSDT"></label>
           <label class="field">Side
             <select id="f-side"><option>BUY</option><option>SELL</option></select>
           </label>
-          <label class="field">Stop <input id="f-stop" inputmode="decimal" placeholder="ATR SL if empty"></label>
           <label class="field">Equity (Agentic) <input id="f-equity" inputmode="decimal"></label>
           <label class="field">Risk % <input id="f-risk" value="1" inputmode="decimal"></label>
+        </div>
+        <div class="form-grid form-grid-compact">
+          <label class="field">Stop <input id="f-stop" inputmode="decimal" placeholder="ATR SL if empty"></label>
           <label class="field">Interval
             <select id="f-interval">
               <option value="1h" selected>1h</option>
@@ -72,21 +79,22 @@
           <label class="field">k TP1 <input id="f-k-tp1" value="1.5" inputmode="decimal"></label>
           <label class="field">k TP2 <input id="f-k-tp2" value="2.5" inputmode="decimal"></label>
         </div>
-        <label class="field">CSV (or upload) — offline fallback
-          <input id="f-file" type="file" accept=".csv,text/csv">
-          <textarea id="f-csv" placeholder="date,open,high,low,close,volume"></textarea>
-        </label>
-        <label class="field">Optional MCP price JSON
-          <textarea id="f-price" placeholder='{"symbol":"BTCUSDT","lastPrice":"102450"}'></textarea>
-        </label>
-        <label class="field">Optional MCP balance JSON
-          <textarea id="f-balance" placeholder='{"account":"agentic","balances":[{"asset":"USDT","free":"1000"}]}'></textarea>
-        </label>
-        <div class="actions analyze-ctas">
-          <button type="button" class="btn primary" id="btn-live" data-i18n="live_binance">Live from Binance</button>
-          <button type="button" class="btn outline" id="btn-sample" data-i18n="use_sample">Offline sample (CSV)</button>
+        <div class="actions">
           <button type="button" class="btn" id="btn-analyze" data-i18n="run_analyze">Explain this setup</button>
         </div>
+        <details id="analyze-advanced" class="advanced">
+          <summary data-i18n="advanced_toggle">Advanced / offline</summary>
+          <label class="field">CSV (or upload) — offline fallback
+            <input id="f-file" type="file" accept=".csv,text/csv">
+            <textarea id="f-csv" placeholder="date,open,high,low,close,volume"></textarea>
+          </label>
+          <label class="field">Optional MCP price JSON
+            <textarea id="f-price" placeholder='{"symbol":"BTCUSDT","lastPrice":"102450"}'></textarea>
+          </label>
+          <label class="field">Optional MCP balance JSON
+            <textarea id="f-balance" placeholder='{"account":"agentic","balances":[{"asset":"USDT","free":"1000"}]}'></textarea>
+          </label>
+        </details>
         <p class="hint" data-i18n="live_hint">Live from Binance is the default for judges. Offline sample (CSV) is the fallback when there is no network. Still dry-run until OK TKT-…. No API keys.</p>
         <p class="hint" data-i18n="presets_or">Or run a demo preset:</p>
         <div class="actions presets">

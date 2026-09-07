@@ -54,7 +54,7 @@ Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 
 ![Paper journal — PAPER / SIMULATED diary. Not a live equity curve.](docs/screenshots/paper-journal.png)
 
-Same app via `python -m safe_desk web`. **Live from Binance** is the judge path: public `ticker/price` + `klines` shaped like official MCP `spot.tickerPrice` / `spot.klines` (no API keys). Sample BTC CSV and paste-JSON stay as offline fallbacks. Trades stay dry-run until `OK TKT-…`. This UI never stores secrets and never places an order.
+Same app via `python -m safe_desk web`. **Live from Binance** is the judge path: public `ticker/price` + `klines` shaped like official MCP `spot.tickerPrice` / `spot.klines` (no API keys). Live no longer pastes CSV into the form; **Advanced / offline** holds offline paste and MCP JSON. Trades stay dry-run until `OK TKT-…`. This UI never stores secrets and never places an order.
 
 ### Docker
 
@@ -76,7 +76,7 @@ docker compose up --build
 
 Open [http://localhost:8765](http://localhost:8765), then:
 
-1. **Analyze → Live from Binance** (badge `LIVE · MCP-shaped`). **Offline sample (CSV)** is the fallback if the network is blocked.  
+1. **Analyze → Live from Binance** (chip `LIVE · BTCUSDT · last … · N bars · 1h`). Live does not paste CSV into the form; **Advanced / offline** holds paste. **Offline sample (CSV)** is the fallback if the network is blocked.  
 2. Ticket → status `AWAITING_APPROVAL` (1% risk, still not an order)  
 3. Type `OK TKT-…` (a bare `ok` is rejected)  
 4. **Paper** journal — **PAPER / SIMULATED**, not live PnL  

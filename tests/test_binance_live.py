@@ -302,18 +302,48 @@ def test_ui_exposes_live_from_binance(tmp_path: Path):
     client = _client(tmp_path)
     home = client.get("/")
     assert home.status_code == 200
-    assert "Live from Binance" in home.text
-    assert "btn-live" in home.text
-    assert "Offline sample (CSV)" in home.text
-    assert "Use sample BTC CSV" not in home.text
-    live_pos = home.text.find('id="btn-live"')
-    sample_pos = home.text.find('id="btn-sample"')
+    html = home.text
+    assert "Live from Binance" in html
+    assert "btn-live" in html
+    assert "Offline sample (CSV)" in html
+    assert "Use sample BTC CSV" not in html
+    live_pos = html.find('id="btn-live"')
+    sample_pos = html.find('id="btn-sample"')
     assert 0 <= live_pos < sample_pos
-    assert 'class="btn primary" id="btn-live"' in home.text
-    assert 'class="btn outline" id="btn-sample"' in home.text
+    assert 'class="btn primary" id="btn-live"' in html
+    assert 'class="btn outline" id="btn-sample"' in html
     js = client.get("/static/app.js").text
     assert "Живые данные Binance" in js
     assert "Офлайн-пример (CSV)" in js
     assert "путь по умолчанию для судей" in js
     assert "LIVE · MCP-shaped" in js
-    assert 'id="btn-live"' in home.text
+    assert 'id="btn-live"' in html
+    assert _analyze_ui_is_live_desk(html, js)
+
+
+def test_ui_advanced_collapsed_and_live_chip(tmp_path: Path):
+    client = _client(tmp_path)
+    html = client.get("/").text
+    js = client.get("/static/app.js").text
+    assert _analyze_ui_is_live_desk(html, js)
+
+
+def _analyze_ui_is_live_desk(html: str, js: str) -> bool:
+    start = html.find("<details")
+    tag_end = html.find(">", start)
+    assert start != -1
+    assert "open" not in html[start:tag_end]
+    assert 'id="analyze-advanced"' in html
+    assert html.find('id="analyze-advanced"') < html.find('id="f-csv"')
+    assert html.find('id="analyze-advanced"') < html.find('id="f-price"')
+    assert html.find('id="analyze-advanced"') < html.find('id="f-balance"')
+    assert 'id="analyze-source"' in html
+    assert "Advanced / offline" in html
+    assert "$(\"#f-csv\").value = data.bars_csv" not in js
+    assert "setSourceChip" in js
+    assert "LIVE · {symbol} · last {last} · {bars} bars · {interval}" in js
+    assert "LIVE · {symbol} · last {last} · {bars} бар · {interval}" in js
+    assert "OFFLINE · sample CSV" in js
+    assert "OFFLINE · пример CSV" in js
+    assert "Дополнительно / офлайн" in js
+    return True
