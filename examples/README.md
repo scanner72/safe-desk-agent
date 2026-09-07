@@ -8,7 +8,7 @@ Columns: `date,open,high,low,close,volume`
 
 `mcp-price.json` and `mcp-balance.json` are **SIMULATED** MCP-shaped payloads (same last / equity as the demo). They are not secrets and not a live account. In a connected session, replace them with a real tool result from `https://agent.binance.com/mcp/agentic`.
 
-Or skip the console: `python -m safe_desk.web` and click **Live from Binance** (public MCP-shaped ticker + klines). **Use sample BTC CSV** is the offline fallback.
+Or skip the console: `python -m safe_desk.web` and click **Live from Binance** (public MCP-shaped ticker + klines). **Offline sample (CSV)** is the fallback when there is no network.
 
 Replay (no secrets):
 

@@ -26,7 +26,7 @@ The local web UI can fetch **public** market data (`/api/v3/ticker/price`, `/api
 - Equity can stay typed (empty Agentic wallet is fine). Balance paste-JSON is optional.
 - Still dry-run. Still waits for `OK TKT-…`. Still refuses withdraw.
 
-If the public endpoints are unreachable, use **Use sample BTC CSV**.
+If the public endpoints are unreachable, use **Offline sample (CSV)**.
 
 ---
 
@@ -98,7 +98,7 @@ The place path is still the official MCP after `OK TKT-…`. Offline mode only d
 | Step | Live | Offline |
 |---|---|---|
 | Price / balance | Call MCP tools, then pass JSON or numbers into `safe_desk` / the ticket | Web **Live from Binance** (public ticker) or CSV last + a stated rehearsal equity |
-| Analyze | MCP klines **or** web Live from Binance **or** helper on CSV with `--price-json` overlay | `python -m safe_desk analyze` / **Use sample BTC CSV** |
+| Analyze | MCP klines **or** web Live from Binance **or** helper on CSV with `--price-json` overlay | `python -m safe_desk analyze` / **Offline sample (CSV)** |
 | Proof | Helper on those klines / CSV | `python -m safe_desk proof` |
 | Policy | Always | Always |
 | Ticket | `awaiting_approval` only if policy passes and proof does not block | Same |

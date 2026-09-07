@@ -304,8 +304,16 @@ def test_ui_exposes_live_from_binance(tmp_path: Path):
     assert home.status_code == 200
     assert "Live from Binance" in home.text
     assert "btn-live" in home.text
-    assert "Use sample BTC CSV" in home.text
+    assert "Offline sample (CSV)" in home.text
+    assert "Use sample BTC CSV" not in home.text
+    live_pos = home.text.find('id="btn-live"')
+    sample_pos = home.text.find('id="btn-sample"')
+    assert 0 <= live_pos < sample_pos
+    assert 'class="btn primary" id="btn-live"' in home.text
+    assert 'class="btn outline" id="btn-sample"' in home.text
     js = client.get("/static/app.js").text
     assert "Живые данные Binance" in js
+    assert "Офлайн-пример (CSV)" in js
+    assert "путь по умолчанию для судей" in js
     assert "LIVE · MCP-shaped" in js
     assert 'id="btn-live"' in home.text
