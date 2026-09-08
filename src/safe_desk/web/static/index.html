@@ -44,6 +44,7 @@
         <div class="actions presets">
           <button type="button" class="btn primary preset-btn" data-preset="ideal" data-i18n="preset_ideal">Ideal setup (Approved path)</button>
           <button type="button" class="btn warn preset-btn" data-preset="risk_breach" data-i18n="preset_risk">Risk breach (Blocked by Policy)</button>
+          <button type="button" class="btn warn preset-btn" data-preset="wide_stop" data-i18n="preset_wide_stop">Wide stop (Blocked by risk brake)</button>
           <button type="button" class="btn danger preset-btn" data-preset="withdraw" data-i18n="preset_withdraw">Withdraw attempt (Forbidden)</button>
         </div>
         <div id="preset-out"></div>
@@ -79,6 +80,7 @@
           <label class="field">k TP1 <input id="f-k-tp1" value="1.5" inputmode="decimal"></label>
           <label class="field">k TP2 <input id="f-k-tp2" value="2.5" inputmode="decimal"></label>
         </div>
+        <p id="f-stop-risk-warn" class="err stop-risk-warn" hidden></p>
         <div class="actions">
           <button type="button" class="btn" id="btn-analyze" data-i18n="run_analyze">Explain this setup</button>
         </div>
@@ -100,6 +102,7 @@
         <div class="actions presets">
           <button type="button" class="btn primary preset-btn" data-preset="ideal" data-i18n="preset_ideal">Ideal setup (Approved path)</button>
           <button type="button" class="btn warn preset-btn" data-preset="risk_breach" data-i18n="preset_risk">Risk breach (Blocked by Policy)</button>
+          <button type="button" class="btn warn preset-btn" data-preset="wide_stop" data-i18n="preset_wide_stop">Wide stop (Blocked by risk brake)</button>
           <button type="button" class="btn danger preset-btn" data-preset="withdraw" data-i18n="preset_withdraw">Withdraw attempt (Forbidden)</button>
         </div>
         <p class="hint" data-i18n="chart_hint">Chart shows ATR-based Entry / SL / TP1 / TP2. Levels refresh from the latest ATR when you re-analyze. Advisory only — not a live trailing order.</p>
@@ -127,6 +130,8 @@
           <label class="field">Equity <input id="t-equity" inputmode="decimal"></label>
           <label class="field">Risk % <input id="t-risk" value="1" inputmode="decimal"></label>
         </div>
+        <p id="t-stop-risk-warn" class="err stop-risk-warn" hidden></p>
+        <p class="hint" data-i18n="stop_risk_hint">A wider stop at the same size is blocked if risk would exceed the 1% cap. Tighten the stop or lower size.</p>
         <div class="actions">
           <button type="button" class="btn primary" id="btn-ticket" data-i18n="create_ticket">Create ticket (still not an order)</button>
         </div>

@@ -44,7 +44,7 @@ Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 |---|---|
 | **Dashboard** | Dry-run on, MCP URL, emergency stop, last proof / policy, **demo presets** |
 | **Analyze** | **Live from Binance** (public ticker + klines, MCP-shaped) or sample / pasted CSV → why ENTER / WAIT / SKIP + 1% size. Chart shows **ATR-based Entry / SL / TP1 / TP2** (defaults k_sl=1.2, k_tp1=1.5, k_tp2=2.5). Advisory only; not a live trailing order. Empty Stop → 1% size uses the ATR stop. |
-| **Ticket** | Create a ticket (SL / TP1 / TP2 filled from ATR when you analyzed first); Approve stays disabled until you type `OK TKT-…` |
+| **Ticket** | Create a ticket (SL / TP1 / TP2 filled from ATR when you analyzed first); a wider stop at the same size is blocked if it would exceed 1%. Approve stays disabled until you type `OK TKT-…` |
 | **Paper** | SIMULATED entries / exits and running **PAPER** PnL (not live) |
 | **Alerts** | Proof REJECT, policy BLOCKED, withdraw attempt, daily cap |
 
@@ -186,7 +186,7 @@ Exchange-level (Binance) and desk-level (this repo) — both required. Details: 
 | Mode | `dry-run` every new session |
 | Approval | `OK TKT-<id>` only — not a bare “ok” |
 | Proof / policy | Analog gate + allowlist / notional / 1% / daily caps / emergency stop before a ticket |
-| Risk | ≤ 1% of **Agentic** equity; never auto-raise |
+| Risk | ≤ 1% of **Agentic** equity; never auto-raise. A stop cannot exceed that cap at the same size (`qty × \|E−S\| / equity`). Tighten the stop or lower size — no silent extra risk. |
 | Product | SPOT (futures only after an explicit ask + liquidation warning) |
 | Withdraw / send-out / main sweep | Always refuse |
 | Live switch | `ENABLE LIVE` then `I ACCEPT LIVE RISK` |
@@ -230,6 +230,8 @@ python -m safe_desk.web
 python -m safe_desk size --equity 1000 --entry 102450 --stop 100200
 python -m safe_desk proof examples/btc-ohlcv.csv --symbol BTCUSDT --side BUY
 python -m safe_desk policy check --symbol BTCUSDT --side BUY --notional 455 --risk-pct 1 --intent ticket
+python -m safe_desk policy check --symbol BTCUSDT --side BUY --entry 102450 --stop 90000 \
+  --quantity 0.00444444 --equity 1000 --risk-pct 1
 python -m safe_desk ticket --symbol BTCUSDT --side BUY --equity 1000 \
   --entry 102450 --stop 100200 --tp 106950 \
   --proof-csv examples/btc-ohlcv.csv

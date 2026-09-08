@@ -60,6 +60,7 @@ class TicketBody(BaseModel):
     take_profit: float | None = None
     take_profit_2: float | None = None
     risk_pct: float = 1.0
+    quantity: float | None = None
     k_sl: float | None = None
     k_tp1: float | None = None
     k_tp2: float | None = None
@@ -229,6 +230,7 @@ def create_app(*, root: Path | None = None, log_dir: Path | None = None) -> Fast
                 take_profit=body.take_profit,
                 take_profit_2=body.take_profit_2,
                 risk_pct=body.risk_pct,
+                quantity=body.quantity,
                 k_sl=body.k_sl,
                 k_tp1=body.k_tp1,
                 k_tp2=body.k_tp2,

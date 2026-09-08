@@ -24,7 +24,7 @@ Treat the Agentic subaccount like a **prepaid card**. Fund only what you can aff
 | Mode | `dry-run` every new session |
 | Human approval | Ticket id + `OK TKT-…` before any place call |
 | Proof gate | Leakage-safe analog check on OHLCV before a ticket. `WAIT` blocks live; dry-run may draft with WARNING. `--require-proof` blocks `REJECT`. |
-| Policy engine | Allowlist, max notional, max 1% risk, daily loss/volume caps, emergency stop (`config/policy.example.yaml`). Fail → `BLOCKED`. |
+| Policy engine | Allowlist, max notional, max 1% risk, stop-vs-risk (same size + farther stop → block), daily loss/volume caps, emergency stop (`config/policy.example.yaml`). Fail → `BLOCKED`. |
 | Risk cap | 1% of **Agentic** equity per ticket (never auto-raise; config cannot raise it) |
 | Product | SPOT only unless the user explicitly asks and accepts liquidation language |
 | Withdrawals / transfer-out | Always refuse (policy + prompt). `python -m safe_desk policy check --intent withdraw` fails. |

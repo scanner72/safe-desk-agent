@@ -17,6 +17,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, Sequence
 
+from safe_desk.i18n import Lang, norm_lang, t
+from safe_desk.position_sizing import (
+    actual_risk_pct,
+    capital_at_risk_quote,
+    risk_exceeds_limit,
+    stop_side_ok,
+)
 from safe_desk.yaml_lite import load_yaml_lite
 
 HARD_MAX_RISK_PCT = 1.0
@@ -77,15 +84,22 @@ class PolicyResult:
     violations: tuple[PolicyViolation, ...]
     config_source: str
     emergency_stop: bool
+    actual_risk_pct: float | None = None
+    risk_limit_pct: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data: dict[str, Any] = {
             "ok": self.ok,
             "intent": self.intent,
             "violations": [asdict(v) for v in self.violations],
             "config_source": self.config_source,
             "emergency_stop": self.emergency_stop,
         }
+        if self.actual_risk_pct is not None:
+            data["actual_risk_pct"] = self.actual_risk_pct
+        if self.risk_limit_pct is not None:
+            data["risk_limit_pct"] = self.risk_limit_pct
+        return data
 
 
 def classify_intent(intent: str | None) -> IntentKind:
@@ -190,10 +204,20 @@ def evaluate_policy(
     daily_loss: float = 0.0,
     daily_volume: float = 0.0,
     config: PolicyConfig | None = None,
+    entry: float | None = None,
+    stop: float | None = None,
+    quantity: float | None = None,
+    equity: float | None = None,
+    lang: Lang | str = "en",
 ) -> PolicyResult:
     cfg = config or hard_policy()
+    language = norm_lang(lang if isinstance(lang, str) else lang)
     violations: list[PolicyViolation] = []
     kind = classify_intent(intent)
+    computed_actual: float | None = None
+    risk_limit = cfg.max_risk_pct
+    if risk_pct is not None and risk_pct > 0:
+        risk_limit = min(cfg.max_risk_pct, float(risk_pct)) if risk_pct <= cfg.max_risk_pct else cfg.max_risk_pct
 
     if kind in {"withdraw", "transfer_out", "main_to_agentic"}:
         violations.append(
@@ -271,6 +295,27 @@ def evaluate_policy(
             )
         if side is not None and side.upper() not in {"BUY", "SELL"}:
             violations.append(PolicyViolation(code="SIDE_INVALID", message=f"side {side!r} is not BUY or SELL."))
+        violations.extend(
+            _stop_risk_violations(
+                side=side,
+                entry=entry,
+                stop=stop,
+                quantity=quantity,
+                equity=equity,
+                limit_pct=risk_limit,
+                lang=language,
+            )
+        )
+        if (
+            quantity is not None
+            and entry is not None
+            and stop is not None
+            and equity is not None
+            and equity > 0
+            and quantity > 0
+            and entry != stop
+        ):
+            computed_actual = actual_risk_pct(equity, capital_at_risk_quote(entry, stop, quantity))
 
     return PolicyResult(
         ok=not violations,
@@ -278,7 +323,64 @@ def evaluate_policy(
         violations=tuple(violations),
         config_source=cfg.source,
         emergency_stop=cfg.emergency_stop,
+        actual_risk_pct=computed_actual,
+        risk_limit_pct=risk_limit if kind == "ticket" else None,
     )
+
+
+def _stop_risk_violations(
+    *,
+    side: str | None,
+    entry: float | None,
+    stop: float | None,
+    quantity: float | None,
+    equity: float | None,
+    limit_pct: float,
+    lang: Lang,
+) -> list[PolicyViolation]:
+    """Explicit stop-vs-risk brake. Wider stop + same size → BLOCK, never silent re-size."""
+    out: list[PolicyViolation] = []
+    if entry is None or stop is None:
+        return out
+    if entry <= 0 or stop <= 0:
+        out.append(
+            PolicyViolation(
+                code="STOP_INVALID",
+                message=t(lang, "stop_invalid_price"),
+            )
+        )
+        return out
+    if entry == stop:
+        out.append(
+            PolicyViolation(
+                code="STOP_INVALID",
+                message=t(lang, "stop_same_as_entry"),
+            )
+        )
+        return out
+    if side is not None and side.upper() in {"BUY", "SELL"} and not stop_side_ok(side, entry, stop):
+        out.append(
+            PolicyViolation(
+                code="STOP_WRONG_SIDE",
+                message=t(lang, "stop_wrong_side", side=side.upper()),
+            )
+        )
+    if quantity is None or equity is None:
+        return out
+    if quantity <= 0:
+        out.append(PolicyViolation(code="QUANTITY_INVALID", message=t(lang, "quantity_invalid")))
+        return out
+    if equity <= 0:
+        return out
+    actual = actual_risk_pct(equity, capital_at_risk_quote(entry, stop, quantity))
+    if risk_exceeds_limit(actual, limit_pct):
+        out.append(
+            PolicyViolation(
+                code="STOP_RISK",
+                message=t(lang, "stop_risk_block", actual=actual, limit=limit_pct),
+            )
+        )
+    return out
 
 
 def usage_from_log(

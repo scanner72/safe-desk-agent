@@ -4,6 +4,7 @@
 # Hard rules that this file cannot disable:
 #   - withdrawals / transfer-out / main→Agentic pull always refuse
 #   - max_risk_pct is capped at 1.0 even if you write a higher number
+#   - a wider stop at the same size cannot push capital-at-risk above max_risk_pct
 #   - official MCP only: https://agent.binance.com/mcp/agentic
 
 version: 1

@@ -10,6 +10,7 @@ from safe_desk.desk import (
     Desk,
     PRESET_IDEAL,
     PRESET_RISK_BREACH,
+    PRESET_WIDE_STOP,
     PRESET_WITHDRAW,
 )
 from safe_desk.web.app import create_app
@@ -28,10 +29,11 @@ def test_preset_catalog_and_ui_copy(tmp_path: Path):
     assert home.status_code == 200
     assert "Ideal setup (Approved path)" in home.text
     assert "Risk breach (Blocked by Policy)" in home.text
+    assert "Wide stop (Blocked by risk brake)" in home.text
     assert "Withdraw attempt (Forbidden)" in home.text
     catalog = client.get("/api/demo/presets").json()
     names = [row["name"] for row in catalog["presets"]]
-    assert names == [PRESET_IDEAL, PRESET_RISK_BREACH, PRESET_WITHDRAW]
+    assert names == [PRESET_IDEAL, PRESET_RISK_BREACH, PRESET_WIDE_STOP, PRESET_WITHDRAW]
     assert catalog["dry_run"] is True
     assert catalog["live_trading"] is False
     assert catalog["secrets_stored"] is False
@@ -97,6 +99,32 @@ def test_risk_breach_preset_is_policy_blocked(tmp_path: Path):
     assert "blocked" in blocked.json()["message"].lower()
 
 
+def test_wide_stop_preset_is_stop_risk_blocked(tmp_path: Path):
+    client = _client(tmp_path)
+    res = client.post("/api/demo/preset", json={"name": "wide_stop"})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["preset"] == PRESET_WIDE_STOP
+    assert body["blocked"] is True
+    assert body["ticket_status"] == "blocked"
+    ticket = body["ticket"]["ticket"]
+    assert ticket["status"] == "blocked"
+    reasons = " ".join(body["blocked_reasons"])
+    assert "STOP_RISK" in reasons
+    assert "too far" in reasons.lower() or "Tighten stop" in reasons
+    assert any(v["code"] == "STOP_RISK" for v in ticket["policy"]["violations"])
+    assert body["lock"]["stop"] == 100200.0
+    assert ticket["stop_loss"] == pytest.approx(90_000.0)
+    assert ticket["quantity"] == pytest.approx(body["lock"]["quantity"])
+    assert body["analyze"]["policy"]["ok"] is True
+
+    blocked = client.post(
+        "/api/ticket/approve",
+        json={"phrase": body["ok_phrase"], "ticket_id": ticket["id"]},
+    )
+    assert blocked.status_code == 400
+
+
 def test_withdraw_preset_refuses_and_alerts(tmp_path: Path):
     client = _client(tmp_path)
     res = client.post("/api/demo/preset", json={"name": "withdraw"})
@@ -128,6 +156,8 @@ def test_desk_preset_aliases(tmp_path: Path):
     assert approved["preset"] == PRESET_IDEAL
     blocked = desk.run_preset("Blocked by Policy")
     assert blocked["preset"] == PRESET_RISK_BREACH
+    wide = desk.run_preset("stop too far")
+    assert wide["preset"] == PRESET_WIDE_STOP
     forbidden = desk.run_preset("forbidden")
     assert forbidden["preset"] == PRESET_WITHDRAW
     with pytest.raises(ValueError, match="unknown preset"):
