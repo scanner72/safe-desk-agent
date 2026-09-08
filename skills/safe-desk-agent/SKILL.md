@@ -18,7 +18,7 @@ read / price / analyze  →  proof  →  policy  →  ticket TKT-…  →  WAIT 
 
 1. **Analyze** — live path: MCP at `https://agent.binance.com/mcp/agentic` (price / balance / klines), **or** the web UI **Live from Binance** button (public MCP-shaped ticker/klines, no keys). Offline path: **Offline sample (CSV)** or `python -m safe_desk analyze` on a CSV. See [prompts/LIVE_VS_OFFLINE.md](../../prompts/LIVE_VS_OFFLINE.md). Explain why in plain language (ENTER / WAIT / SKIP) — still not an order. If the slower (weekly) trend disagrees with the daily setup, prefer WAIT. That is a caution, not a place.
 2. **Proof** — `python -m safe_desk proof`. APPROVE / WAIT / REJECT. `WAIT` blocks live; dry-run may draft with WARNING. `--require-proof` blocks REJECT.
-3. **Policy** — `python -m safe_desk policy check` (allowlist, notional, 1% risk, daily caps, emergency stop). Fail → `BLOCKED`, no `AWAITING_APPROVAL`.
+3. **Policy** — `python -m safe_desk policy check` (allowlist, notional, 1% risk, stop-vs-risk, daily caps, emergency stop). Fail → `BLOCKED`, no `AWAITING_APPROVAL`.
 4. **Ticket** — size, SL, TP, risk ≤ 1% of **Agentic** equity. Status `awaiting_approval` only if gates pass.
 5. **Wait.** Do not call Trade tools.
 6. **OK TKT-…** only. Then re-quote. Dry-run simulates. Live places once.
@@ -28,7 +28,7 @@ read / price / analyze  →  proof  →  policy  →  ticket TKT-…  →  WAIT 
 - Refuse withdrawals, transfer-out, and main→Agentic pulls. Policy check always fails those intents.
 - Dry-run every new session. Live requires `ENABLE LIVE` then `I ACCEPT LIVE RISK`.
 - Do not emit `AWAITING_APPROVAL` if policy failed or a blocking proof fired (`BLOCKED`).
-- Cap risk at 1%. Never raise it.
+- Cap risk at 1%. Never raise it. A wider stop at the same size is blocked if capital-at-risk would exceed that cap.
 - SPOT default. Futures/margin only after an explicit ask and a liquidation warning.
 - Discover real MCP tool names. Do not invent endpoints. No API keys.
 - Log every proposal to `logs/proposals.jsonl` or a one-line JSON in chat.

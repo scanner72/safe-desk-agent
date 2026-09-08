@@ -214,6 +214,8 @@ th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line
 th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
 
 .err { color: var(--skip); font-weight: 600; }
+.stop-risk-warn { margin: 8px 0 0; }
+.stop-risk-warn[hidden] { display: none; }
 .okmsg { color: var(--enter); font-weight: 600; }
 .hint { color: var(--muted); font-size: 0.88rem; }
 footer {

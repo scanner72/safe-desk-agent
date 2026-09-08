@@ -47,6 +47,10 @@ const I18N = {
     chart_offline: "Lightweight Charts CDN unavailable — simple offline chart.",
     atr_used: "1% size uses the ATR stop distance.",
     atr_user_stop: "Sizing used your stop. ATR SL/TP1/TP2 below are still suggestions.",
+    preset_wide_stop: "Wide stop (Blocked by risk brake)",
+    stop_risk_hint: "A wider stop at the same size is blocked if risk would exceed the 1% cap. Tighten the stop or lower size.",
+    stop_risk_block: "Stop is too far — risk would be {actual}% > limit {limit}%. Tighten stop or lower size.",
+    stop_wrong_side: "Stop is on the wrong side of entry. BUY stop must be below entry; SELL stop must be above.",
   },
   ru: {
     paper_banner: "PAPER / SIMULATED — не живой PnL Binance. Dry-run включён. Секретов нет.",
@@ -93,6 +97,10 @@ const I18N = {
     chart_offline: "CDN Lightweight Charts недоступен — простой офлайн-график.",
     atr_used: "Размер на 1% риска считает дистанцию до ATR-стопа.",
     atr_user_stop: "Размер по вашему стопу. SL/TP1/TP2 от ATR ниже — всё ещё подсказки.",
+    preset_wide_stop: "Широкий стоп (блок по риску)",
+    stop_risk_hint: "Более далёкий стоп при том же размере блокируется, если риск превысит лимит 1%. Сожмите стоп или уменьшите размер.",
+    stop_risk_block: "Стоп слишком далеко — риск был бы {actual}% > лимита {limit}%. Сожмите стоп или уменьшите размер.",
+    stop_wrong_side: "Стоп не с той стороны от входа. Для BUY стоп ниже входа; для SELL — выше.",
   },
 };
 
@@ -101,6 +109,7 @@ let lastAnalyze = null;
 let lastDataKind = null;
 let lastTicket = null;
 let lastChart = null;
+let lockedSize = null;
 const chartHandles = {};
 const LEVEL_COLORS = { entry: "#0f4c5c", sl: "#9b2226", tp1: "#2d6a4f", tp2: "#40916c" };
 
@@ -123,6 +132,7 @@ function applyLang() {
     drawChart("analyze-chart", "analyze-legend", lastChart);
     drawChart("ticket-chart", "ticket-legend", lastChart);
   }
+  updateStopRiskWarn();
 }
 
 function showPanel(name) {
@@ -299,6 +309,8 @@ async function runAnalyze(mode) {
     if (live) $("#f-stop").value = "";
     applyAtrSuggestions(data);
     showChartFromAnalyze(data);
+    setLockedSizeFromAnalyze(data);
+    updateStopRiskWarn();
     await loadStatus();
     await loadAlerts();
   } catch (err) {
@@ -318,6 +330,7 @@ async function createTicket() {
     take_profit: numOrNull($("#t-tp").value),
     take_profit_2: numOrNull($("#t-tp2").value),
     risk_pct: numOrNull($("#t-risk").value) || 1,
+    quantity: quantityToLockForTicket(),
     k_sl: numOrNull($("#f-k-sl") && $("#f-k-sl").value),
     k_tp1: numOrNull($("#f-k-tp1") && $("#f-k-tp1").value),
     k_tp2: numOrNull($("#f-k-tp2") && $("#f-k-tp2").value),
@@ -333,6 +346,10 @@ async function createTicket() {
   try {
     const { data } = await api("/api/ticket", { method: "POST", body: JSON.stringify(body) });
     paintTicket(data);
+    if (data.ticket && data.ticket.quantity) {
+      setLockedSizeFromTicket(data.ticket, { keepSizedStop: Boolean(body.quantity) });
+    }
+    updateStopRiskWarn();
     if (data.chart) showChartFromAnalyze({ chart: data.chart, levels: data.levels });
     else if (lastAnalyze) showChartFromAnalyze(lastAnalyze);
     await loadStatus();
@@ -485,6 +502,107 @@ function numOrNull(v) {
   if (v == null || String(v).trim() === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+
+function setLockedSizeFromAnalyze(data) {
+  if (!data || !data.size || data.size.quantity == null) return;
+  lockedSize = {
+    quantity: data.size.quantity,
+    entry: data.size.entry,
+    stop: data.size.stop,
+    equity: data.size.equity,
+    risk_pct: data.size.risk_pct || 1,
+    side: data.side || "BUY",
+  };
+}
+
+function setLockedSizeFromTicket(ticket, opts) {
+  if (!ticket || ticket.quantity == null) return;
+  const keepSizedStop = opts && opts.keepSizedStop;
+  const prevStop = lockedSize && lockedSize.stop;
+  lockedSize = {
+    quantity: ticket.quantity,
+    entry: ticket.entry,
+    stop: keepSizedStop && prevStop != null ? prevStop : ticket.stop_loss,
+    equity: ticket.equity_quote,
+    risk_pct: ticket.risk_pct || 1,
+    side: ticket.side || "BUY",
+  };
+}
+
+function capitalAtRisk(entry, stop, qty) {
+  return Math.abs(Number(entry) - Number(stop)) * Number(qty);
+}
+
+function stopSideOk(side, entry, stop) {
+  if (entry === stop) return false;
+  if (side === "BUY") return stop < entry;
+  if (side === "SELL") return stop > entry;
+  return true;
+}
+
+function quantityToLockForTicket() {
+  if (!lockedSize || lockedSize.quantity == null) return null;
+  const entry = numOrNull($("#t-entry").value);
+  const stop = numOrNull($("#t-stop").value);
+  if (entry == null || stop == null) return null;
+  const oldDist = Math.abs(lockedSize.entry - lockedSize.stop);
+  const newDist = Math.abs(entry - stop);
+  if (newDist > oldDist + 1e-9) return lockedSize.quantity;
+  return null;
+}
+
+function stopRiskMessage(fields) {
+  const entry = fields.entry;
+  const stop = fields.stop;
+  const equity = fields.equity;
+  const riskPct = fields.riskPct || 1;
+  const side = fields.side;
+  const quantity = fields.quantity;
+  if (entry == null || stop == null) return "";
+  if (!stopSideOk(side, entry, stop)) return t("stop_wrong_side");
+  if (quantity == null || equity == null || equity <= 0 || quantity <= 0) return "";
+  if (lockedSize) {
+    const oldDist = Math.abs(lockedSize.entry - lockedSize.stop);
+    const newDist = Math.abs(entry - stop);
+    if (newDist <= oldDist + 1e-9) return "";
+  }
+  const actual = (100 * capitalAtRisk(entry, stop, quantity)) / equity;
+  if (actual > riskPct + 1e-9) {
+    return format(t("stop_risk_block"), { actual: actual.toFixed(2), limit: String(riskPct) });
+  }
+  return "";
+}
+
+function paintStopRiskWarn(el, msg) {
+  if (!el) return;
+  if (msg) {
+    el.hidden = false;
+    el.textContent = msg;
+  } else {
+    el.hidden = true;
+    el.textContent = "";
+  }
+}
+
+function updateStopRiskWarn() {
+  const qty = lockedSize && lockedSize.quantity;
+  paintStopRiskWarn($("#f-stop-risk-warn"), stopRiskMessage({
+    entry: lastAnalyze && lastAnalyze.last != null ? lastAnalyze.last : numOrNull($("#t-entry") && $("#t-entry").value),
+    stop: numOrNull($("#f-stop") && $("#f-stop").value),
+    equity: numOrNull($("#f-equity") && $("#f-equity").value),
+    riskPct: numOrNull($("#f-risk") && $("#f-risk").value) || 1,
+    side: $("#f-side") && $("#f-side").value,
+    quantity: qty,
+  }));
+  paintStopRiskWarn($("#t-stop-risk-warn"), stopRiskMessage({
+    entry: numOrNull($("#t-entry") && $("#t-entry").value),
+    stop: numOrNull($("#t-stop") && $("#t-stop").value),
+    equity: numOrNull($("#t-equity") && $("#t-equity").value),
+    riskPct: numOrNull($("#t-risk") && $("#t-risk").value) || 1,
+    side: $("#t-side") && $("#t-side").value,
+    quantity: qty,
+  }));
 }
 
 function fillDemoDefaults() {
@@ -710,6 +828,12 @@ function fillRiskBreachDefaults() {
   $("#t-risk").value = "2";
 }
 
+function fillWideStopDefaults() {
+  fillDemoDefaults();
+  $("#f-stop").value = "90000";
+  $("#t-stop").value = "90000";
+}
+
 async function runPreset(name) {
   const note = $("#preset-out");
   if (note) setErr(note, "");
@@ -728,6 +852,8 @@ async function runPreset(name) {
     }
     if (data.preset === "risk_breach") {
       fillRiskBreachDefaults();
+    } else if (data.preset === "wide_stop") {
+      fillWideStopDefaults();
     } else {
       fillDemoDefaults();
     }
@@ -737,11 +863,18 @@ async function runPreset(name) {
       setSourceChip(data.analyze, lastDataKind);
       applyAtrSuggestions(data.analyze);
       showChartFromAnalyze(data.analyze);
+      setLockedSizeFromAnalyze(data.analyze);
+    }
+    if (data.preset === "wide_stop") {
+      $("#t-stop").value = "90000";
+      $("#f-stop").value = "90000";
+      if (data.lock) lockedSize = data.lock;
     }
     if (data.ticket) {
       paintTicket(data.ticket);
       if (data.ticket.chart) showChartFromAnalyze({ chart: data.ticket.chart, levels: data.ticket.levels });
     }
+    updateStopRiskWarn();
     if (note) {
       const cls = data.blocked ? "err" : "okmsg";
       note.innerHTML = `<p class="${cls}">${data.title}. ${data.message}</p>`;
@@ -775,6 +908,12 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("#btn-close-tp").addEventListener("click", () => closePaper("take_profit"));
   $("#btn-close-sl").addEventListener("click", () => closePaper("stop"));
   $("#btn-withdraw").addEventListener("click", tryWithdraw);
+  ["f-stop", "f-equity", "f-risk", "f-side", "t-stop", "t-entry", "t-equity", "t-risk", "t-side"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", updateStopRiskWarn);
+    el.addEventListener("change", updateStopRiskWarn);
+  });
   $$(".preset-btn").forEach((b) => {
     b.addEventListener("click", () => runPreset(b.dataset.preset));
   });

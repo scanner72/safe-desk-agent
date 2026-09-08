@@ -29,7 +29,7 @@ from safe_desk.policy import (
     resolve_policy_path,
     usage_from_log,
 )
-from safe_desk.position_sizing import size_spot
+from safe_desk.position_sizing import size_spot, size_spot_at_quantity
 from safe_desk.proof import ProofReport, proof_blocks_ticket, run_proof
 from safe_desk.risk import evaluate_setup
 from safe_desk.ticket import Status, build_ticket
@@ -98,6 +98,12 @@ def main(argv: list[str] | None = None) -> int:
     ticket.add_argument("--tp", type=float, default=None)
     ticket.add_argument("--tp2", type=float, default=None)
     ticket.add_argument("--risk-pct", type=float, default=1.0)
+    ticket.add_argument(
+        "--quantity",
+        type=float,
+        default=None,
+        help="Keep this size (do not re-size). A wider stop at this qty fails STOP_RISK.",
+    )
     ticket.add_argument("--k-sl", type=float, default=None, help="ATR multiple for SL when --stop is omitted")
     ticket.add_argument("--k-tp1", type=float, default=None)
     ticket.add_argument("--k-tp2", type=float, default=None)
@@ -143,6 +149,10 @@ def main(argv: list[str] | None = None) -> int:
     pcheck.add_argument("--side", choices=("BUY", "SELL"), default=None)
     pcheck.add_argument("--notional", type=float, default=None)
     pcheck.add_argument("--risk-pct", type=float, default=None)
+    pcheck.add_argument("--entry", type=float, default=None, help="Entry for stop-vs-risk brake")
+    pcheck.add_argument("--stop", type=float, default=None, help="Stop for stop-vs-risk brake")
+    pcheck.add_argument("--quantity", type=float, default=None, help="Proposed qty (lock size)")
+    pcheck.add_argument("--equity", type=float, default=None, help="Agentic equity for capital-at-risk")
     pcheck.add_argument("--product", default="SPOT")
     pcheck.add_argument("--intent", default="ticket", help="ticket | withdraw | transfer_out | …")
     pcheck.add_argument("--daily-loss", type=float, default=None)
@@ -441,7 +451,11 @@ def _cmd_ticket(args: argparse.Namespace, lang: Lang) -> int:
         print("ticket needs --stop, or --proof-csv so an ATR stop can be suggested", file=sys.stderr)
         return 2
 
-    sized = size_spot(equity, entry, stop, args.risk_pct, lang=lang)
+    lock_qty = getattr(args, "quantity", None)
+    if lock_qty is not None:
+        sized = size_spot_at_quantity(equity, entry, stop, lock_qty, args.risk_pct, lang=lang)
+    else:
+        sized = size_spot(equity, entry, stop, args.risk_pct, lang=lang)
 
     cfg = None
     if not args.no_policy:
@@ -462,6 +476,11 @@ def _cmd_ticket(args: argparse.Namespace, lang: Lang) -> int:
         daily_loss=daily_loss,
         daily_volume=daily_volume,
         config=cfg,
+        entry=entry,
+        stop=stop,
+        quantity=sized.quantity,
+        equity=equity,
+        lang=lang,
     )
 
     proof: ProofReport | None = None
@@ -571,6 +590,11 @@ def _cmd_policy_check(args: argparse.Namespace, lang: Lang) -> int:
         daily_loss=daily_loss,
         daily_volume=daily_volume,
         config=cfg,
+        entry=getattr(args, "entry", None),
+        stop=getattr(args, "stop", None),
+        quantity=getattr(args, "quantity", None),
+        equity=getattr(args, "equity", None),
+        lang=lang,
     )
     if args.json:
         print(json.dumps(result.to_dict(), indent=2))
@@ -586,6 +610,8 @@ def _cmd_policy_check(args: argparse.Namespace, lang: Lang) -> int:
             print(f"{'Notional':<16}{_fmt(args.notional)}")
         if args.risk_pct is not None:
             print(f"{'Risk %':<16}{args.risk_pct:g}")
+        if result.actual_risk_pct is not None:
+            print(f"{'Stop risk %':<16}{result.actual_risk_pct:.2f}  (limit {result.risk_limit_pct:g}%)")
         if result.violations:
             print()
             print("Violations")

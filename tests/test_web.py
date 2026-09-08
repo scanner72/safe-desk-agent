@@ -23,6 +23,9 @@ def test_dashboard_and_health(tmp_path: Path):
     assert "OK TKT" in home.text
     assert "Demo presets" in home.text
     assert "Ideal setup (Approved path)" in home.text
+    assert "Wide stop (Blocked by risk brake)" in home.text
+    assert "t-stop-risk-warn" in home.text
+    assert "A wider stop at the same size is blocked" in home.text
     assert "Live from Binance" in home.text
     assert "Offline sample (CSV)" in home.text
     assert "Use sample BTC CSV" not in home.text
@@ -208,3 +211,35 @@ def test_desk_approve_requires_full_phrase(tmp_path: Path):
     assert desk.approve(f"OK {tid}")["ok"] is True
     paper = desk.journal()
     assert paper["events"][0]["simulated"] is True
+
+
+def test_ticket_api_blocks_wide_stop_locked_qty(tmp_path: Path):
+    client = _client(tmp_path)
+    sized = client.post(
+        "/api/analyze",
+        json={
+            "use_sample": True,
+            "symbol": "BTCUSDT",
+            "side": "BUY",
+            "stop": 100200,
+            "equity": 1000,
+            "risk_pct": 1,
+        },
+    ).json()["size"]
+    ticket = client.post(
+        "/api/ticket",
+        json={
+            "symbol": "BTCUSDT",
+            "side": "BUY",
+            "entry": 102450,
+            "stop": 90000,
+            "equity": 1000,
+            "quantity": sized["quantity"],
+            "use_sample": True,
+        },
+    )
+    assert ticket.status_code == 200
+    body = ticket.json()
+    assert body["ticket"]["status"] == "blocked"
+    assert any("STOP_RISK" in r for r in body["blocked_reasons"])
+    assert any(v["code"] == "STOP_RISK" for v in body["ticket"]["policy"]["violations"])

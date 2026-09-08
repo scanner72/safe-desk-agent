@@ -44,7 +44,7 @@ from safe_desk.policy import (
     resolve_policy_path,
     usage_from_log,
 )
-from safe_desk.position_sizing import SizeResult, size_spot
+from safe_desk.position_sizing import SizeResult, size_spot, size_spot_at_quantity
 from safe_desk.proof import ProofReport, proof_blocks_ticket, run_proof
 from safe_desk.risk import SetupReport, evaluate_setup
 from safe_desk.ticket import Status, TradeTicket, build_ticket
@@ -61,9 +61,12 @@ DEMO_TAKE_PROFIT = 106950.0
 DEMO_EQUITY = 1000.0
 DEMO_RISK_PCT = 1.0
 DEMO_RISK_BREACH_PCT = 2.0
+# Farther than DEMO_STOP for a BUY — same qty would exceed 1% equity.
+DEMO_WIDE_STOP = 90_000.0
 
 PRESET_IDEAL = "ideal"
 PRESET_RISK_BREACH = "risk_breach"
+PRESET_WIDE_STOP = "wide_stop"
 PRESET_WITHDRAW = "withdraw"
 
 PRESET_CATALOG: tuple[dict[str, str], ...] = (
@@ -77,6 +80,12 @@ PRESET_CATALOG: tuple[dict[str, str], ...] = (
         "name": PRESET_RISK_BREACH,
         "title": "Risk breach (Blocked by Policy)",
         "summary": "Same setup at 2% risk. Policy RISK_CAP → BLOCKED. No place path.",
+        "panel": "ticket",
+    },
+    {
+        "name": PRESET_WIDE_STOP,
+        "title": "Wide stop (Blocked by risk brake)",
+        "summary": "ATR/1% size kept, stop moved farther. Policy STOP_RISK → BLOCKED.",
         "panel": "ticket",
     },
     {
@@ -291,6 +300,11 @@ class Desk:
                 daily_loss=daily_loss,
                 daily_volume=daily_volume,
                 config=self.policy_config(),
+                entry=last,
+                stop=effective_stop,
+                quantity=None if sized is None else sized.quantity,
+                equity=equity,
+                lang=language,
             )
             self.last_policy = policy
 
@@ -349,6 +363,7 @@ class Desk:
         take_profit: float | None = None,
         take_profit_2: float | None = None,
         risk_pct: float = 1.0,
+        quantity: float | None = None,
         k_sl: float | None = None,
         k_tp1: float | None = None,
         k_tp2: float | None = None,
@@ -414,7 +429,12 @@ class Desk:
                 f"TP2 filled from ATR × {multipliers.k_tp2:g} (advisory)."
             )
 
-        sized = size_spot(equity, entry, stop, risk_pct, lang=language)
+        if quantity is not None:
+            sized = size_spot_at_quantity(
+                equity, entry, stop, quantity, risk_pct, lang=language
+            )
+        else:
+            sized = size_spot(equity, entry, stop, risk_pct, lang=language)
         daily_loss, daily_volume = usage_from_log(self.paths.proposals)
         policy = evaluate_policy(
             intent="ticket",
@@ -426,6 +446,11 @@ class Desk:
             daily_loss=daily_loss,
             daily_volume=daily_volume,
             config=self.policy_config(),
+            entry=entry,
+            stop=stop,
+            quantity=sized.quantity,
+            equity=equity,
+            lang=language,
         )
         self.last_policy = policy
 
@@ -691,10 +716,12 @@ class Desk:
             return self._preset_ideal(language)
         if key == PRESET_RISK_BREACH:
             return self._preset_risk_breach(language)
+        if key == PRESET_WIDE_STOP:
+            return self._preset_wide_stop(language)
         if key == PRESET_WITHDRAW:
             return self._preset_withdraw()
         raise ValueError(
-            f"unknown preset {name!r}. Use ideal, risk_breach, or withdraw."
+            f"unknown preset {name!r}. Use ideal, risk_breach, wide_stop, or withdraw."
         )
 
     def _preset_ideal(self, lang: Lang) -> dict[str, Any]:
@@ -770,6 +797,57 @@ class Desk:
             "blocked_reasons": list(created.get("blocked_reasons") or []),
         }
 
+    def _preset_wide_stop(self, lang: Lang) -> dict[str, Any]:
+        """Keep ATR/1% quantity, move stop farther — STOP_RISK must block."""
+        analyzed = self.analyze(
+            use_sample=True,
+            symbol=DEMO_SYMBOL,
+            side=DEMO_SIDE,
+            equity=DEMO_EQUITY,
+            risk_pct=DEMO_RISK_PCT,
+            lang=lang,
+        )
+        sized = size_spot(DEMO_EQUITY, DEMO_ENTRY, DEMO_STOP, DEMO_RISK_PCT, lang=lang)
+        created = self.create_ticket(
+            symbol=DEMO_SYMBOL,
+            side=DEMO_SIDE,
+            entry=DEMO_ENTRY,
+            stop=DEMO_WIDE_STOP,
+            equity=DEMO_EQUITY,
+            risk_pct=DEMO_RISK_PCT,
+            quantity=sized.quantity,
+            take_profit=DEMO_TAKE_PROFIT,
+            use_sample=True,
+            lang=lang,
+        )
+        ticket = created["ticket"]
+        return {
+            "preset": PRESET_WIDE_STOP,
+            "title": "Wide stop (Blocked by risk brake)",
+            "panel": "ticket",
+            "message": (
+                "Same 1% size as the ATR/normal stop, but the stop was moved farther. "
+                "Policy STOP_RISK blocked this ticket. Tighten stop or lower size. "
+                "No place path."
+            ),
+            "analyze": analyzed,
+            "ticket": created,
+            "blocked": True,
+            "dry_run": True,
+            "ok_phrase": created["ok_phrase"],
+            "ticket_id": ticket["id"],
+            "ticket_status": ticket["status"],
+            "blocked_reasons": list(created.get("blocked_reasons") or []),
+            "lock": {
+                "quantity": sized.quantity,
+                "entry": DEMO_ENTRY,
+                "stop": DEMO_STOP,
+                "equity": DEMO_EQUITY,
+                "risk_pct": DEMO_RISK_PCT,
+                "side": DEMO_SIDE,
+            },
+        }
+
     def _preset_withdraw(self) -> dict[str, Any]:
         refused = self.refuse_withdraw(note="demo preset: withdraw")
         return {
@@ -806,6 +884,9 @@ def _norm_preset_name(name: str | None) -> str:
         "risk_breach": PRESET_RISK_BREACH,
         "blocked": PRESET_RISK_BREACH,
         "blocked_by_policy": PRESET_RISK_BREACH,
+        "wide_stop": PRESET_WIDE_STOP,
+        "stop_risk": PRESET_WIDE_STOP,
+        "stop_too_far": PRESET_WIDE_STOP,
         "forbidden": PRESET_WITHDRAW,
         "withdraw_attempt": PRESET_WITHDRAW,
         "withdrawal": PRESET_WITHDRAW,
@@ -871,6 +952,9 @@ def _size_dict(sized: SizeResult) -> dict[str, Any]:
         "notional": sized.notional,
         "clamped_to_equity": sized.clamped_to_equity,
         "notes": list(sized.notes),
+        "actual_risk_quote": sized.actual_risk_quote,
+        "actual_risk_pct": sized.actual_risk_pct,
+        "quantity_locked": sized.quantity_locked,
     }
 
 
