@@ -118,7 +118,7 @@ Add a Streamable HTTP MCP server:
 
 ## Demo
 
-**Video (60–90s):** TODO — paste a public X / YouTube / Drive URL here after you record. Do not invent a URL.  
+**Video (60–90s):** https://x.com/scanner721/status/2097234311338401951  
 Script: [docs/demo-script.md](docs/demo-script.md) · Shot list: [demo/WALKTHROUGH.md](demo/WALKTHROUGH.md) · Transcripts: [demo/](demo/) (all **SIMULATED**)
 
 Do not invent live PnL. Keep dry-run on. A bare `ok` must fail; only `OK TKT-…` continues.

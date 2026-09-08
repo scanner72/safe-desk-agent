@@ -2,7 +2,7 @@
 
 Speak this while screen-recording. Numbers match [demo/](../demo/) and `examples/btc-ohlcv.csv` so you can rehearse offline. Shot list: [demo/WALKTHROUGH.md](../demo/WALKTHROUGH.md). If MCP auth works on camera, replace the helper printout with a real `price` / `balance` tool result. Do **not** invent PnL.
 
-**Video URL placeholder (paste after upload):** `https://x.com/REPLACE_ME` or YouTube unlisted.
+**Video URL:** https://x.com/scanner721/status/2097234311338401951
 
 ## Setup
 
