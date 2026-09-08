@@ -70,6 +70,8 @@ Dry-run / **PAPER** is the default. No API secrets are needed for the local UI.
 
 ### Judge path
 
+Film or walk this: [docs/judge-mcp-checklist.md](docs/judge-mcp-checklist.md) (~90s Docker UI + optional official MCP).
+
 ```bash
 docker compose up --build
 ```
